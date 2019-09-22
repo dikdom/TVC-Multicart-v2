@@ -1,0 +1,80 @@
+F_INIT_ENTRIES:      
+; init the EXIT to BASIC entry
+            LD      a,$01 
+            LD      hl,CART_NAME_STRUCT 
+            LD      (hl),a 
+            INC     hl ; points to low byte of directory address
+            INC     hl ; points to high byte of directory address
+            LD      a,(BAM_START_ADDRESS+1) ; by default BAM starts at $F000
+            ADD     a,$02 ; directory starts at BAM+$0200
+            LD      (hl),a ; by default CART_NAME_STRUCT is filled with 00
+
+            LD      ix,CART_NAME_STRUCT+4 
+            XOR     a 
+            LD      (NUM_OF_IMAGES),a 
+            LD      de,$0214 ; BAM+first entry
+            LD      hl,(BAM_START_ADDRESS) 
+            ADD     hl,de 
+ICE_BANK_OK:         
+            LD      d,(hl) ; type of image
+            CP      d 
+            JR      Z,ICE_DONE 
+            LD      (IX+0),D 
+
+; CART_NAME_STRUCT contains pointer to directory entry
+; instead of image start
+            LD      (IX+1),l 
+            LD      (IX+2),h 
+            INC     hl 
+            INC     hl 
+            INC     hl 
+            LD      d,(hl) 
+            LD      (IX+3),d 
+            INC     ix 
+            INC     ix 
+            INC     ix 
+            INC     ix 
+
+
+; end of change
+; 
+
+;===== OLD format, CART_NAME_STRUCT contains pointer to program start
+;            INC     HL
+;                    ; bank (0-31)
+;            LD      d,(hl)
+;            LD      (IX+1),D
+;            INC     HL
+;                    ; 256 block pos (0-63)
+;            LD      d,(hl)
+;            LD      (IX+2),D
+;            INC     HL
+;                    ; File Size in kB
+;            LD      d,(hl)
+;            LD      (IX+3),D
+
+;            LD      DE,$0004
+;            ADD     IX,DE
+;==== end of OLD format
+
+            PUSH    HL 
+            LD      HL,NUM_OF_IMAGES 
+            INC     (HL) 
+            POP     HL 
+; Skip name of image (16 bytes) + next entry
+            LD      DE,$0011 
+            ADD     HL,DE 
+            CP      h 
+            JR      z,ICE_DONE 
+            JR      ICE_BANK_OK 
+
+ICE_DONE:            
+            LD      (ix+0),0 ; for sorting this is the end marker
+            RET      
+
+
+
+
+
+
+

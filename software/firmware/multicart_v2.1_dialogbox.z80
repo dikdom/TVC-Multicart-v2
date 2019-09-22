@@ -1,0 +1,570 @@
+; b;c => x,y character coordiaates, (0,0) is the upper left corner
+; d;e => w,h external height.
+DIALOG_XY   EQU     $2000 
+DIALOG_Y    EQU     $2000 
+DIALOG_X    EQU     $2001 
+DIALOG_WH   EQU     $2002 
+DIALOG_H    EQU     $2002 
+DIALOG_W    EQU     $2003 
+DIALOG_CUR_X EQU    $2004 
+DIALOG_CUR_Y EQU    $2005 
+
+DIALOG_BACKGROUND_COPY EQU $2006 
+
+; h must not be bigger than 24
+; y+h must not be bigger than 25
+; x+w must not be bigger than 64
+
+F_SHOW_DIALOG_BOX:   
+            DI       
+            LD      a,$10 
+            OUT     (2),a 
+
+            LD      (DIALOG_XY),bc 
+            LD      (DIALOG_WH),de 
+
+            CALL    save_dialog_background 
+            CALL    draw_dialog 
+            LD      a,1 
+            LD      (DIALOG_CUR_X),a 
+            LD      (DIALOG_CUR_Y),a 
+
+
+            LD      a,$30 
+            OUT     (2),a 
+            RET      
+
+F_CLOSE_DIALOG_BOX:  
+            DI       
+            LD      a,$10 
+            OUT     (2),a 
+
+            LD      bc,(DIALOG_XY) 
+            LD      de,(DIALOG_WH) 
+
+            CALL    restore_dialog_background 
+
+            LD      a,$30 
+            OUT     (2),a 
+            RET      
+
+SAVE_DIALOG_BACKGROUND:  
+            CALL    SETUP_VARIABLES_FOR_COPY 
+            PUSH    hl 
+L_SD_LOOP:           
+            LD      a,(DIALOG_W) 
+            LD      b,a ; num of chars (bytes)
+L_SD_ONE_LINE_LOOP:  
+            LD      a,(hl) 
+            LD      (de),a 
+            INC     hl 
+            INC     de 
+            DJNZ    L_SD_ONE_LINE_LOOP 
+            POP     hl 
+            PUSH    de 
+            LD      de,64 
+            ADD     hl,de 
+            POP     de 
+            PUSH    hl 
+            DEC     c 
+            JR      nz,L_SD_LOOP 
+            POP     hl 
+            RET      
+
+
+DRAW_DIALOG:         
+; 
+; top header line
+; 
+            LD      a,(DIALOG_Y) 
+            LD      c,a 
+            CALL    MULTIPLE_C_BY_640 
+            LD      de,5*64+$8000 
+            ADD     hl,de 
+            LD      a,(DIALOG_X) 
+            LD      e,a 
+            LD      d,0 
+            ADD     hl,de 
+            PUSH    hl 
+            LD      a,(hl) 
+            OR      00001111b 
+            LD      (hl),a 
+            LD      a,(DIALOG_W) 
+            SUB     2 
+            LD      b,a 
+            INC     hl 
+            LD      a,$ff 
+L_TOP_LINE_LOOP:     
+            LD      (hl),a 
+            INC     hl 
+            DJNZ    L_TOP_LINE_LOOP 
+            LD      a,(hl) 
+            OR      11100000b 
+            LD      (hl),a 
+
+; 
+; first 4 lines, starting vertical bars. No shadors to the right
+; 
+            LD      c,4 
+            POP     hl 
+            LD      de,64 
+            ADD     hl,de 
+            PUSH    hl 
+L_TOP_LINES_NO_SHADOW_LOOP:  
+            LD      a,(hl) 
+            AND     11110000b 
+            OR      00001000b 
+            LD      (hl),a 
+            INC     hl 
+            LD      a,(DIALOG_W) 
+            SUB     2 
+            LD      b,a 
+            XOR     a 
+L_TOP_LINES_NO_SHADOW_LINE_LOOP:  
+            LD      (hl),a 
+            INC     hl 
+            DJNZ    L_TOP_LINES_NO_SHADOW_LINE_LOOP 
+            LD      a,(hl) 
+            AND     00011111b 
+            OR      00100000b 
+            LD      (hl),a 
+            POP     hl 
+            ADD     hl,de 
+            PUSH    hl 
+            DEC     c 
+            JR      nz,L_TOP_LINES_NO_SHADOW_LOOP 
+
+; 
+; (height-2) * 10 lines, with shadows to the right
+; 
+            LD      a,(DIALOG_H) 
+            SUB     2 
+            LD      c,a 
+            SLA     a ;8xA
+            SLA     a 
+            SLA     a 
+            SLA     c ;2xC
+            ADD     a,c ;A+C
+            LD      c,a ; C = DIALOG_H*10
+L_VERT_LINES_SHADOW_LOOP:  
+            LD      a,(DIALOG_W) 
+            SUB     2 
+            LD      b,a 
+            LD      a,(hl) 
+            AND     11110000b 
+            OR      00001000b 
+            LD      (hl),a 
+            INC     hl 
+            XOR     a 
+L_VERT_LINES_SHADOW_LINE_LOOP:  
+            LD      (hl),a 
+            INC     hl 
+            DJNZ    L_VERT_LINES_SHADOW_LINE_LOOP 
+            LD      a,(hl) 
+            AND     00001111b 
+            LD      d,c 
+            RR      d 
+            JR      c,ODD_PATTERN 
+            OR      00110101b 
+            JR      SKIP_ODD_PATTERN 
+ODD_PATTERN:         
+            OR      00101010b 
+SKIP_ODD_PATTERN:    
+            LD      (hl),a 
+            POP     hl 
+            LD      de,64 
+            ADD     hl,de 
+            PUSH    hl 
+            DEC     c 
+            JR      nz,L_VERT_LINES_SHADOW_LOOP 
+
+; 
+; last 5 lines (without closing line) with shadow
+; 
+            LD      c,5 
+L_VERT_LAST_LINES_SHADOW_LOOP:  
+            LD      a,(DIALOG_W) 
+            SUB     2 
+            LD      b,a 
+            LD      a,(hl) 
+            AND     11110000b 
+            OR      00001000b 
+            LD      (hl),a 
+            INC     hl 
+            XOR     a 
+L_VERT_LAST_LINES_SHADOW_LINE_LOOP:  
+            LD      (hl),a 
+            INC     hl 
+            DJNZ    L_VERT_LAST_LINES_SHADOW_LINE_LOOP 
+            LD      a,(hl) 
+            AND     00001111b 
+            LD      d,c 
+            RR      d 
+            JR      c,ODD_PATTERN_LAST4 
+            OR      00101010b 
+            JR      SKIP_ODD_PATTERN_LAST4 
+ODD_PATTERN_LAST4:   
+            OR      00110101b 
+SKIP_ODD_PATTERN_LAST4:  
+            LD      (hl),a 
+            POP     hl 
+            LD      de,64 
+            ADD     hl,de 
+            PUSH    hl 
+            DEC     c 
+            JR      nz,L_VERT_LAST_LINES_SHADOW_LOOP 
+
+; 
+; last - closing - line
+; 
+            LD      a,(DIALOG_W) 
+            SUB     2 
+            LD      b,a 
+            LD      a,(hl) 
+            AND     11110000b 
+            OR      00001111b 
+            LD      (hl),a 
+            INC     hl 
+            LD      a,$ff 
+L_LAST_LINE_LOOP:    
+            LD      (hl),a 
+            INC     hl 
+            DJNZ    L_LAST_LINE_LOOP 
+            LD      a,(hl) 
+            AND     00001111b 
+            OR      11111010b 
+            LD      (hl),a 
+
+            POP     hl 
+            LD      de,64 
+            ADD     hl,de 
+            PUSH    hl 
+
+; 
+; last 4 shadowed lines
+            LD      c,4 
+            LD      e,01010101b 
+L_LAST_LINES_SHADOW_LOOP:  
+            INC     hl 
+            LD      a,(DIALOG_W) 
+            LD      b,a 
+            DEC     b 
+L_LAST_LINES_SHADOW_LINE_LOOP:  
+            LD      a,(hl) 
+            OR      e 
+            LD      (hl),a 
+            INC     hl 
+            DJNZ    L_LAST_LINES_SHADOW_LINE_LOOP 
+            LD      a,e 
+            CPL      
+            POP     hl 
+            LD      de,64 
+            ADD     hl,de 
+            PUSH    hl 
+            LD      e,a 
+
+            DEC     c 
+            JR      nz,L_LAST_LINES_SHADOW_LOOP 
+
+            POP     hl 
+            RET      
+
+RESTORE_DIALOG_BACKGROUND:  
+            CALL    SETUP_VARIABLES_FOR_COPY 
+            PUSH    hl 
+L_RD_LOOP:           
+            LD      a,(DIALOG_W) 
+            LD      b,a ; num of chars (bytes)
+L_RD_ONE_LINE_LOOP:  
+            LD      a,(de) 
+            LD      (hl),a 
+            INC     hl 
+            INC     de 
+            DJNZ    L_RD_ONE_LINE_LOOP 
+            POP     hl 
+            PUSH    de 
+            LD      de,64 
+            ADD     hl,de 
+            POP     de 
+            PUSH    hl 
+            DEC     c 
+            JR      nz,L_RD_LOOP 
+            POP     hl 
+            RET      
+
+SETUP_VARIABLES_FOR_COPY:  
+            CALL    MULTIPLE_C_BY_640 
+            LD      a,(DIALOG_X) 
+            LD      c,a 
+            LD      b,0 
+            ADD     hl,bc 
+            LD      de,$8000 
+            ADD     hl,de ; start pos in video memory
+
+            LD      a,(DIALOG_H) 
+            LD      b,a 
+            SLA     a ; mul by 8
+            SLA     a 
+            SLA     a 
+
+            SLA     b ; mul by 2
+            ADD     a,b 
+            LD      c,a ; num of lines
+            LD      a,(DIALOG_W) 
+            LD      b,a ; num of chars (bytes)
+            LD      de,DIALOG_BACKGROUND_COPY ; backup target of video memory
+            RET      
+
+F_PRINT_DELETE_QUESTION:  
+            LD      a,(DIALOG_X) 
+            ADD     a,2 
+            LD      b,a 
+            LD      a,(DIALOG_Y) 
+            ADD     a,2 
+            LD      c,a 
+            RST     30h 
+            DB      $23 
+            LD      de,STR_DELETE_QUESTION ; VID_BKOUT
+            LD      bc,STR_DELETE_QUESTION_END-STR_DELETE_QUESTION 
+            RST     30h 
+            DB      $22 
+
+            LD      a,(LIST_SELECTED_ELEMENT) 
+            LD      b,a 
+            LD      a,(LIST_FIRST_ELEMENT) 
+            ADD     a,b 
+            LD      h,0 ; multiply A by 4 => HL
+            SLA     a 
+            RL      h 
+            SLA     a 
+            RL      h 
+            LD      l,a 
+            LD      de,CART_NAME_STRUCT 
+            ADD     hl,de 
+            INC     hl 
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) 
+            EX      de,hl 
+            LD      de,0004 
+            ADD     hl,de 
+            LD      bc,16 
+            LD      de,STR_TEMP_AREA 
+            LDIR     
+
+            LD      hl,STR_TEMP_AREA 
+            LD      b,16 
+            CALL    str_rtrim 
+            LD      c,b 
+            LD      b,0 
+            PUSH    bc 
+
+            SRL     c 
+            LD      a,(DIALOG_W) 
+            SRL     a 
+            SUB     c 
+            LD      c,a 
+            LD      a,(DIALOG_X) 
+            ADD     a,2 
+            ADD     a,c 
+            LD      b,a 
+            DEC     b 
+            LD      a,(DIALOG_Y) 
+            ADD     a,4 
+            LD      c,a 
+            RST     30h 
+            DB      $23 
+            POP     bc 
+            LD      de,STR_TEMP_AREA 
+            RST     30h 
+            DB      $22 
+
+            LD      a,(DIALOG_X) 
+            ADD     a,2+14 
+            LD      b,a 
+            LD      a,(DIALOG_Y) 
+            ADD     a,7 
+            LD      c,a 
+            RST     30h 
+            DB      $23 
+            LD      de,STR_DELETE_ANSWER 
+            LD      bc,STR_DELETE_ANSWER_END-STR_DELETE_ANSWER 
+            RST     30h 
+            DB      $22 
+            RET      
+
+STR_RTRIM:           
+            LD      e,b 
+            LD      d,0 
+            PUSH    hl 
+            LD      a,$20 
+
+L_SRT_LOOP:          
+            POP     hl 
+            DEC     e 
+            JP      m,L_SRT_EMPTY_STR 
+            PUSH    hl 
+            ADD     hl,de 
+            CP      (hl) 
+            JR      z,L_SRT_LOOP 
+            POP     hl 
+            LD      b,e 
+            INC     b 
+            RET      
+L_SRT_EMPTY_STR:     
+            LD      b,0 
+            RET      
+
+F_CLEAR_BOX:         
+            DI       
+            LD      a,$10 
+            OUT     (2),a 
+
+            LD      a,(DIALOG_Y) 
+            LD      c,a 
+
+            CALL    SETUP_VARIABLES_FOR_COPY 
+            LD      de,641 ; x and y adjustment for inner area
+            ADD     hl,de 
+            LD      a,c 
+            SUB     20 
+            LD      c,a 
+            PUSH    hl 
+L_CLEAR_DB_LOOP:     
+            LD      a,(DIALOG_W) 
+            SUB     2 
+            LD      b,a ; num of chars (bytes)
+            XOR     a 
+L_CLEAR_DB_ONE_LINE_LOOP:  
+            LD      (hl),a 
+            INC     hl 
+            DJNZ    L_CLEAR_DB_ONE_LINE_LOOP 
+            POP     hl 
+            LD      de,64 
+            ADD     hl,de 
+            PUSH    hl 
+            DEC     c 
+            JR      nz,L_CLEAR_DB_LOOP 
+            POP     hl 
+
+            LD      a,$30 
+            OUT     (2),a 
+
+            RET      
+; DE: String pointer
+; BC: Length of string
+; A: 0:Print in next line, left indentation
+;    1:Print in next line, right indentation
+;    2:Print in same line, continue
+;    3:Print in next line, center indentation
+
+F_PRINT_ONE_LINE_IN_DIALOG:  
+            PUSH    bc 
+            PUSH    de 
+            CP      0 
+            JR      z,L_DB_PRINT_NEXT_LINE_LEFT 
+            CP      1 
+            JR      z,L_DB_PRINT_NEXT_LINE_RIGHT 
+            CP      2 
+            JR      z,L_DB_PRINT_AFTER 
+            CP      3 
+            JR      z,L_DB_PRINT_NEXT_LINE_CENTER 
+L_DB_PRINT_NEXT_LINE_LEFT:  
+            LD      a,1 
+            LD      (DIALOG_CUR_X),a 
+            LD      a,(DIALOG_Y) 
+            LD      b,a 
+            LD      a,(DIALOG_CUR_Y) 
+            ADD     a,b 
+            INC     a 
+            LD      c,a 
+            LD      a,(DIALOG_X) 
+            ADD     a,2 
+            LD      b,a 
+            JR      L_DB_PRINT 
+L_DB_PRINT_NEXT_LINE_RIGHT:  
+            LD      a,(DIALOG_W) 
+            SUB     c 
+            LD      c,a 
+            LD      a,(DIALOG_X) 
+            ADD     a,c 
+            LD      b,a 
+            LD      a,1 
+            LD      (DIALOG_CUR_X),a 
+            LD      a,(DIALOG_Y) 
+            LD      c,a 
+            LD      a,(DIALOG_CUR_Y) 
+            ADD     a,c 
+            INC     a 
+            LD      c,a 
+            JR      L_DB_PRINT 
+L_DB_PRINT_NEXT_LINE_CENTER:  
+            LD      a,1 
+            LD      (DIALOG_CUR_X),a 
+
+            LD      a,(DIALOG_W) 
+            SUB     c ; length of string
+            SRL     a 
+            LD      b,a 
+            LD      a,(DIALOG_X) 
+            ADD     a,b 
+            ADD     a,1 
+            LD      b,a 
+
+            LD      a,(DIALOG_Y) 
+            LD      c,a 
+            LD      a,(DIALOG_CUR_Y) 
+            ADD     a,c 
+            INC     a 
+            LD      c,a 
+            JR      L_DB_PRINT 
+
+L_DB_PRINT_AFTER:    
+            LD      hl,DIALOG_CUR_Y 
+            DEC     (hl) 
+
+            LD      a,(DIALOG_Y) 
+            LD      b,a 
+            LD      a,(DIALOG_CUR_Y) 
+            ADD     a,b 
+            INC     a 
+            LD      c,a 
+            LD      a,(DIALOG_X) 
+            LD      b,a 
+            LD      a,(DIALOG_CUR_X) 
+            ADD     a,b 
+            ADD     a,1 
+            LD      b,a 
+            JR      L_DB_PRINT 
+
+L_DB_PRINT:          
+            RST     30h 
+            DB      $23 
+
+            POP     de 
+            POP     bc 
+            LD      a,(DIALOG_CUR_X) 
+            ADD     a,c 
+            LD      (DIALOG_CUR_X),a 
+
+            RST     30h 
+            DB      $22 
+            DI       
+
+            LD      hl,DIALOG_CUR_Y 
+            INC     (hl) 
+
+            RET      
+
+PRINT_PRESS_SPACE:   
+            LD      a,(DIALOG_H) 
+            SUB     2 
+            LD      (DIALOG_CUR_Y),a 
+            LD      de,STR_FLASH_PRESS_SPACE 
+            LD      bc,STR_FLASH_PRESS_SPACE_END-STR_FLASH_PRESS_SPACE 
+            LD      a,1 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+            RET      
+
+
+

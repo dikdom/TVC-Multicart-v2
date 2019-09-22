@@ -1,0 +1,153 @@
+EXIT_TO_BASIC EQU   "KIL\u0081P\u0081S BASIC-be" 
+STR_LANG_LETTER EQU "h" 
+
+STR_MESSAGE:         
+            DB      "Videoton TV Computer MultiCart ROM selection tool v" 
+STR_MESSAGE_END:     
+STR_RAM_FOUND:       
+            DB      "Felismert RAM: " 
+STR_RAM_FOUND_END:   
+STR_FLASH_FOUND:     
+            DB      "Felismert flash: " 
+STR_FLASH_FOUND_END:  
+STR_FREE_SPACE:      
+            DB      "Szabad ter\u0097let a modulon: " 
+STR_FREE_SPACE_END:  
+STR_BLOCKS:          
+            DB      " blokk" 
+STR_BLOCKS_END:      
+
+STR_FLASH_SIZES:     
+            DB      "nincs" 
+            DB      "128kB" 
+            DB      "256kB" 
+            DB      "512kB" 
+FLASH_SIZES_POS:     
+            DW      STR_FLASH_SIZES,STR_FLASH_SIZES+5,STR_FLASH_SIZES+10,STR_FLASH_SIZES,STR_FLASH_SIZES+15 
+STR_RAM_SIZES:       
+            DB      "nincs" 
+            DB      "  8kB" 
+            DB      " " 
+STR_CART_SIZE:       
+            DB      "16kB" 
+            DB      " 32kB" 
+            DB      " 64kB" 
+            DB      "128kB" 
+            DB      "256kB" 
+            DB      "512kB" 
+RAM_SIZES_POS:       
+;                   nincs        ,8kB            ,16kB            ,32kB            ,64kB            ,128kB           ,256kB           ,512kB
+            DW      STR_RAM_SIZES,STR_RAM_SIZES+5,STR_RAM_SIZES+10,STR_RAM_SIZES+15,STR_RAM_SIZES+20,STR_RAM_SIZES+25,STR_RAM_SIZES+30,STR_RAM_SIZES+35 
+STR_NAME:            
+            DB      "N\u0091v" 
+STR_NAME_END:        
+STR_SIZE:            
+            DB      "M\u0091r." 
+STR_SIZE_END:        
+STR_TYPE:            
+            DB      "T\u0092p." 
+STR_TYPE_END:        
+STR_USAGE:           
+            DB      "Haszn\u0090lati utas\u0092t\u0090s:" 
+STR_USAGE_END:       
+STR_UPDN:            
+            DB      "Fel/Le: A/Y vagy Joy Fel/Le" 
+STR_UPDN_END:        
+STR_PGUPDN:          
+            DB      "Lapoz\u0090s: " 
+            DB      129 
+            DB      "/: v. Joy Bal/Jobb" 
+STR_PGUPDN_END:      
+STR_TOGGLE_RESET:    
+            DB      "Reset enged/tilt: Space" 
+STR_TOGGLE_RESET_END:  
+STR_START_PROGRAM:   
+            DB      "Kijel\u0094lt prog.ind\u0092t\u0090sa:Return" 
+STR_START_PROGRAM_END:  
+STR_DELETE_PROGRAM:  
+            DB      "Kijel\u0094lt prog. t\u0094rl\u0091se: Del" 
+STR_DELETE_PROGRAM_END:  
+STR_SORT_INSTRUCTIONS:  
+            DB      "Rendez\u0091s (N\u0091v,T\u0092p,M\u0091r):N,T,S" 
+STR_SORT_INSTRUCTIONS_END:  
+STR_SORT_RESET:      
+            DB      "Eredeti sorrend: O" 
+STR_SORT_RESET_END:  
+STR_RENAME:          
+            DB      "Kijel\u0094lt prog. \u0090tnevez\u0091se: R" 
+STR_RENAME_END:      
+STR_RESET_CART:      
+            DB      "MultiCart reset ha TVC reset: " 
+STR_RESET_CART_END:  
+STR_ENABLED:         
+            DB      "Igen" 
+STR_ENABLED_END:     
+STR_DISABLED:        
+            DB      "Nem " 
+STR_DISABLED_END:    
+STR_RAM_TEST:        
+            DB      "RAMTEST" 
+STR_RAM_TEST_END:    
+TEST_CONTENT:        
+            DB      "Test content, FLASH WRITTEN!..." 
+TEST_CONTENT_END:    
+
+STR_DELETE_QUESTION:  
+            DB      "Le akarod t\u0094r\u0094lni ezt a file-t?" 
+STR_DELETE_QUESTION_END:  
+STR_DELETE_ANSWER:   
+            DB      "Y/N" 
+STR_DELETE_ANSWER_END:  
+STR_FOUND_FLASH_CHIP:  
+            DB      "Felismert Flash IC: " 
+STR_FOUND_FLASH_CHIP_END:  
+STR_FLASH_IC_UNKNOWN:  
+            DB      "ismeretlen" 
+STR_FLASH_IC_UNKNOWN_END:  
+STR_FLASH_CREATE_WORK_COPY:  
+            DB      "Munkater\u0097let l\u0091trehoz\u0090sa..." 
+STR_FLASH_CREATE_WORK_COPY_END:  
+STR_FLASH_MODIFY_FS:  
+            DB      "File t\u0094rl\u0091se a filerendszerb\u0095l.." 
+STR_FLASH_MODIFY_FS_END:  
+STR_FLASH_UPDATE:    
+            DB      "Adat vissza\u0092r\u0090sa az ICre..." 
+STR_FLASH_UPDATE_END:  
+STR_FLASH_DONE:      
+            DB      "K\u0091sz." 
+STR_FLASH_DONE_END:  
+STR_FLASH_NOT_SUPPORTED:  
+            DB      "File t\u0094rl\u0091s nem t\u0090mogatott." 
+STR_FLASH_NOT_SUPPORTED_END:  
+STR_FLASH_PRESS_SPACE:  
+            DB      "A folytat\u0090shoz nyomj SPACE -t!" 
+STR_FLASH_PRESS_SPACE_END:  
+STR_FLASH_RENAME_NOT_SUPPORTED:  
+            DB      "File \u0090tnevez\u0091se nem t\u0090mogatott." 
+STR_FLASH_RENAME_NOT_SUPPORTED_END:  
+
+STR_RENAME_Q_NEW_NAME:  
+            DB      "\u0082rd be a file \u0096j nev\u0091t:" 
+STR_RENAME_Q_NEW_NAME_END:  
+STR_RENAME_Q_INSTRUCTION:  
+            DB      "(max 16 char, ESC: kil\u0091p\u0091s)" 
+STR_RENAME_Q_INSTRUCTION_END:  
+STR_TEST_CART_RAM:   
+            DB      "Cart RAM ellen\u0095rz\u0091s: M" 
+STR_TEST_CART_RAM_END:  
+STR_PASSED_SO_FAR:   
+            DB      "Rendben: " 
+STR_PASSED_SO_FAR_END:  
+
+STR_TESTING_RAM:     
+            DB      "MultiCart RAM ellen\u0095rz\u0091se..." 
+STR_TESTING_RAM_END:  
+STR_RAM_TEST_OK:     
+            DB      "MultiCart RAM helyesen m\u0098k\u0094dik !" 
+STR_RAM_TEST_OK_END:  
+STR_RAM_TEST_NOK:    
+            DB      "CART RAM TESZT SIKERTELEN !!!" 
+STR_RAM_TEST_NOK_END:  
+
+; á 90   é 91   í 92   ó 93   ö 94   ő 95   ú 96  ü 97  ű 98
+

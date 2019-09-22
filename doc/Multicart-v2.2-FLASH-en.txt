@@ -1,0 +1,26 @@
+FLASH
+
+PLA
+This chip is responsible for activating-deactivating the right component on the Multicart, based on the containing image.
+Write the  tvc-pla.bin  image to the 128kB Flash (SST39SF010A). If you use a 512kB flash for the PLA, then write the image into the last (upper) 128kB block.
+The PLA chip on the Multicart is the left side PLCC-32 IC, it is alone on the left side of the PCB.
+
+
+ROM
+The two chips contains the usable extension of the TVC machine in 16kB banks. The first 16kB bank is special, it contains the firmware of the Multicart and
+the BAM, the block allocation map of the files. The rest of the flash memory chips contains the files which can be loaded.
+The first IC is on the left one, the second IC is the right one, out of the remaining two sockets. 
+
+Use the windows program to create the two image files for the flash chips.
+First select the size of your flash chips (512kB - 512kB)
+Then make sure that the correct firmware is selected with the required language.
+Then add the files you want your Multicart to contain:
+ - you can add cartridge (bin, cart) files.
+ - you can add .cas files
+You can edit the name of the files and the order of the files.
+
+Generate the two image files and use your favourite burner to burn the flash chips.
+
+
+
+Please note, that you can use AM29F040 chips also, but in this case you will not be able to save files to the cart from TVC BASIC.

@@ -1,0 +1,38 @@
+
+All the components are marked on the PCB, you shall not miss anything. If you have question, ask first, solder later!
+
+4x	100nF, 1# (min 16V, I use X7R or the disc ones. Both are fine and cheap)
+1x	22uF, 1# (4mm diameter, 16V, I use submini, 4x7mm)
+1x	47uF, 1# (5mm diameter, 16V, I use submini, 5x7mm)
+2x	1N4148 diode, 2#
+1x	resistor 1k, 3#
+1x	resistor 4k7, 3#
+1x	resistor 5k1, 3#
+1x	resistor 10k, 3#
+1x	resistor bridge, 10k, 8+1pin
+1x	47pF, 1# (disc form)
+1x	68pF, 1# (disc form)
+1x	3mm red LED
+1x3	pin header + 1x jumper (RAM selector: it is either set to 512kB or less)
+
+(LS or HCT, whichever you can get cheaper)
+1x 	74HCT32 	(+ DIP-14 socket)
+1x 	74HCT74 	(+ DIP-14 socket)
+1x 	74HCT123	(+ DIP-16 socket)
+1x 	74HCT273	(+ DIP-20 socket)
+1x 	DIP-32 socket
+3x 	PLCC-32 through-hole socket (non-SMD!!)
+
+1x	SST39SF010A (128kB flash)
+2x	SST39SF040 (512kB flash)
+
+1x	HM628128 (128kB SRAM). Optional, currently no SW uses the onboard RAM...
+
+I believe it is worth seating the chips in sockets, though the logic ones are not necessary to do so.
+
+You can order SRAM from ebay, or new ones (AS6C1008). If you buy from ebay (probably used one - a lot cheaper) then use precision DIP-32 slot instead of the cheap one.
+
+1# means 2.54mm distance (1 raster)
+3# means 3x2.54mm distance (3 raster)
+
+Before soldering in the 5k1 resistor, check if the LED is bright enough for you! 5k1 for red LED is OK for me, but you might get different LED supplies...

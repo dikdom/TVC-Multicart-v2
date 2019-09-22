@@ -1,0 +1,418 @@
+            .CPU    Z80 
+
+            .BINFROM $C000 
+            .BINTO  last_address  ; use this if release binary is needed
+;            .BINTO  BAM_START ; use this if patching binary is needed
+            .ENT    $c004 
+
+
+CARTSTART   EQU     $C000 
+RELOC       EQU     $3000 
+TEMP_MEMORY_U0 EQU  $08A0 
+REGISTER    EQU     $C000 
+REGISTER_RELOC EQU  $E000 
+REGISTER_DISABLE_RESET EQU REGISTER+2 
+REGISTER_RELOC_DISABLE_RESET EQU REGISTER_RELOC + 2 
+A19         EQU     00100000b 
+RAM         EQU     01000000b 
+REGREL      EQU     10000000b 
+CYCLE_COUNT1 EQU    $0100 
+CYCLE_COUNT2 EQU    $0080 
+X0          EQU     1 
+Y0          EQU     5 
+N_NUM       EQU     3 
+N_NAME      EQU     16 
+N_TYPE      EQU     4 
+N_SIZE      EQU     4 
+N_HEIGHT    EQU     16 
+EN          EQU     0 
+HU          EQU     1
+ES          EQU     2
+LANG        EQU     HU
+
+; 
+; $FF: WARM RESET
+WARM_FLAG   EQU     $0B21 
+; 
+; bit 2 controls blinking cursor if IT enabled
+INT_DES     EQU     $0B10 
+; 
+; BASIC start options on v2.2
+BASIC_FLAG  EQU     $0EB6 
+
+; BASIC PROMPT CONTINUES FROM HERE, not used anymore
+BASIC_ENTRY EQU     $0322 
+
+; TEMP AREA FOR STRINGS
+STR_TEMP_AREA EQU   $4B00 
+
+; IMAGE STRUCTS AREA, 1 RECORD IS 4 BYTE LONG:
+;   TYPE (1 byte: 1:BASIC, 2:CART, 3:CAS),
+;   START POS (2 bytes: pointer to directory entry in the CART),
+;   SIZE in blocks (1 byte)
+CART_NAME_STRUCT EQU $4C00 
+TYPE_EXIT_TO_BASIC EQU 1 
+TYPE_CART   EQU     2 
+TYPE_CAS    EQU     3 
+TYPE_BIN    EQU     4 
+TYPE_DAT    EQU     5 
+
+; STORED AT THE BEGINGING OF CART
+SW_MAJOR_VERSION EQU $21 
+SW_MINOR_VERSION EQU $0C 
+
+; HOW MANY CYCLES BEFORE READING AGAIN - 2 bytes!
+KEYBOARD_COUNTER EQU $0880 
+; WHAT IS THE LAST PRESSED KEY. 0 IS FOR NO KEY WAS PRESSED
+KEYBOARD_LAST_KEY EQU $0882 
+; SERIAL NUMBER OF THE FIRST ITEM IN THE LIST - 2 bytes!
+LIST_FIRST_ELEMENT EQU $0883 
+; NUMBER OF THE SELECTED LINE (0 - N_HEIGHT-1)
+LIST_SELECTED_ELEMENT EQU $0885 
+; HOW MANY IMAGES ARE STORED IN THIS CART - 2 bytes!
+NUM_OF_IMAGES EQU   $0886 
+; SIZE OF THE FIRST FLASH IC (1: 128kB, 2: 256kB, 4: 512kB)
+SIZE_OF_FLASH1 EQU  $0888 
+; SIZE OF THE SECOND FLASH IC  (0: none, 1: 128kB, 2: 256kB, 4: 512kB)
+SIZE_OF_FLASH2 EQU  $0889 
+; SIZE OF RAM (0:none, 1:8kB, 2:16kB, 3:32kB, 4:64kB
+;              5:128kB, 6:256kB, 7:512kB)
+SIZE_OF_CART_RAM EQU $088a 
+; IS THE RESET ENABLED ON CART EXECUTION (0:YES, 2:NO)
+RESET_ENABLED EQU   $088b 
+; during print table, the current pos in directory. 2 bytes!!
+DIRECTORY_POS EQU   $088c 
+; free blocks - 2 bytes!!
+FREE_BLOCKS_IN_BAMS EQU $088e 
+; 1-AMD, 2-SST, 3-ATmel
+FLASH1_TYPE EQU     $0890 
+FLASH2_TYPE EQU     $0891 
+; Chip Manufacturer codes and IDs read from ICs
+FLASH1_MAN  EQU     $0892 
+FLASH1_CHIP EQU     $0893 
+FLASH2_MAN  EQU     $0894 
+FLASH2_CHIP EQU     $0895 
+
+EXT0_BASE   EQU     $08A0 
+
+
+BASIC_PROGRAM_START EQU $19EF 
+TVC_TOP     EQU     $1726 
+BAM_START   EQU     $F000 
+
+; PLAN
+;   - overwrite during save
+;   - W29C040, EN29F040, GLS29EE010
+;   - Load BIN file, start BASIC
+;   - Function ENTRY on CART to
+;     - load a named binary/CAS file, returning start address
+;     - load a DAT file, returning size
+; 
+; Change log:
+; 2.1.12 (screenshot provided to Jaime González Soriano)
+;   - Continue to work on Save program and DAT
+;   - API implementation:
+;     - Getting directory
+;     - Loading file (BIN start address is ignored yet)
+;     - Saving file (not ready)
+;     - Spanish language option added
+; 2.1.11
+;   Released to Vén Gábor, Pénteki Kornél, Bondár Péter
+;   - fixed name based sorting of spec chars ($5B-$5F, $7B-$7F)
+;   - fixed 512kB RAM size print
+;   - CART RAM test implemented
+;   - DAT type introduced, cannot be executed by design
+;   - BIN (not finished)
+;     - save (with start address - not finished)
+;       - enter file name, start address, length
+;       - checking available RAM
+;       - checking available space on flash (not ready)
+;       - copy BAM into C000-CFFF
+;       - refactor writes to copy bytes from TVC RAM or cart RAM
+;     - start (not finished)
+; 2.1.10
+;   - fixed filename in delete dialogbox, filenum is above 64 files..
+;   - fixed delete from a re-ordered file list
+;   - fixed print of the minor part of the version
+;   KNOWN ISSUE
+;    Underscore ("_") character and some others are out of ABC sorting.
+; 2.1.9
+;   Released to facebook, and the cart of Péter Gyöngyössy
+;   - fixed blinking cursor on remove dialog box on TVC ROM v1.2
+;   - fixed rename in sorted listbox
+;   - date contains a range of dates for development
+;   KNOWN ISSUE
+;   - blinking cursor in rename dialogbox after warm reset on TVC ROM v2.2
+; 2.1.8
+;   Released to Zoltán Csomor only
+;   - AT29C0x0 IDs recognized
+;   - Reset Enabled string is YES/NO
+;   - Refactor: Use of CART_NAME_STRUCT and the pointers to
+;     ease the future sorting feature
+;     Modified in
+;     - init struct
+;     - print list
+;     - execute selected program
+;   - Delete from list (and SST flash update) implemented
+;   - sorting based on name (Hungarian chars included), size, type
+;   - TOP is fixed for loading CAS (not relevant, overwritten by reset)
+;   - EXT0 introduced for save: BASIC programs can be saved
+;     no arbitrary binary/ML code after basic can be saved, yet
+;   - Rename in list (and SST flash update) implemented
+;   - localization support added, localized strings are statically compiled
+;     - English and Hungarian strings added
+;   - fixed extra RETURN feed on selecting BASIC/CAS/CART programs
+; 
+; 2.1.3-2.1.7 debug logs
+; 2.1.2
+;   - BIN type introduced.
+;     copies at the first two byte, unless it is less than $0880
+;   - ROM check is performed based on JEDEC standard ID check
+;     recognized chips: AM29F0x0, SST39SF0x0
+; 2.1.1
+;   - RAM check fixed, ported from 2.0.2
+;   - Calculating and printing free space are implemented
+;   - CART images also have size
+;   - numbering in listbox fixed
+;   - pagedn fixed
+;   - 2 bytes allocated for first index and num of images, in
+;      order to be able to handle more than 256 images (in theory
+;      the directory from D200 can handle up to 588 files, while the
+;      BAM can handle up to 4032 files)
+;      TODO: routines not fixed yet!
+; 2.1.0
+;   - source files are renamed, minor version changed
+;   - comments for constants
+;   - BAM is located at D000 by default, can be relocated
+;   - C00C-C00D contains BAM location (by def it is D000)
+;   - Directory is located: BAM + $0200
+;   - one file entry in directory contains
+;      4 bytes header (type, file start location, size)
+;     16 bytes filename
+;   - BAM: 2x 256bytes. Each bit refers to 256 bytes allocated
+;   - CAS file entry has a pointer to the first 256 byte block
+;     subsequent blocks pointers are in the first two bytes in each
+;     blocks in the format of <bank>,<block> (1-31 and 0-63)
+;     - Last block starts with $FF,<valid>, where <valid> contains the
+;       valid bytes in this block (and no more blocks are linked to
+;       this cas file)
+; 2.0.1
+;   - Parsing block numbers in .CAS file at $02-$03 and if
+;   present using that instead of program size from $82-$83.
+;   Num of blocks (nB * $80) is started from $80th pos of the
+;   file
+;   - Fix identifying 512kB ROM
+; 2.0.0
+;   First version that can execute CART and CAS files
+;   Usage is on screen
+;   Version string is constructed using numeric constants
+;   Joy is used for navigation
+;   RESET enable/disable works for CART executions
+
+
+            .ORG    $0030 
+; Only for the ease of debugging
+            POP     hl 
+            INC     hl 
+            PUSH    hl 
+            RET      
+
+            .ORG    CARTSTART 
+            DB      "MOPS" 
+
+ENTRY:               
+            JR      MAIN ; +4
+            DB      SW_MAJOR_VERSION ; +6
+            DB      SW_MINOR_VERSION ; +7
+BAM_START_ADDRESS:   
+            DW      BAM_START ; +8 
+            DW      CONFIGURE_EXT0 ; +10
+            DW      GET_FIRST_DIRECTORY_ENTRY ; +12
+            DW      GET_NEXT_DIRECTORY_ENTRY  ; +14
+            DW      LOAD_FILE_TO_TVCRAM  ; +16
+            DW      SAVE_FILE_TO_MULTICART  ; +18
+
+MAIN:                
+            DI       
+            XOR     a 
+            LD      i,a 
+            LD      a,$30 ; set U0-U1-U2-CART
+            OUT     (2),a 
+            LD      (3),a ; save paging
+
+            LD      a,$02 
+            OUT     (0),a 
+
+            CALL    F_INIT 
+            CALL    f_check_RAM_size 
+
+            CALL    f_print_header 
+            DI       
+            CALL    F_CHECK_ROM_IDS 
+            CALL    f_print_ROM_size 
+            DI       
+            CALL    F_CALC_FREE_SPACE 
+            CALL    F_PRINT_FREE_SPACE 
+
+            DI       
+            CALL    f_print_RAM_found 
+            DI       
+            CALL    F_PRINT_FRAME 
+            CALL    F_INIT_ENTRIES 
+
+
+MAIN_LOOP:           
+            CALL    F_REWRITE_LIST 
+            CALL    F_PRINT_RESET_STATUS 
+            DI       
+            CALL    F_HANDLE_INPUT 
+            JR      MAIN_LOOP 
+
+F_INIT:              
+
+            LD      c,0 ; video mode set to 2 colors, 80 columns
+            RST     30h 
+            DB      $04 
+            DI       
+
+; copy relocated code/data
+            LD      de,reloc 
+            LD      hl,code_in_cart 
+            LD      bc,End_reloc-reloc 
+            LDIR     
+
+; init name structure, fill with 0...
+            XOR     A 
+            LD      hl,CART_NAME_STRUCT 
+            LD      de,CART_NAME_STRUCT+1 
+            LD      bc,$03ff ; $0400
+            LD      (hl),a 
+            LDIR     
+
+            LD      (LIST_FIRST_ELEMENT),a 
+            LD      (LIST_SELECTED_ELEMENT),a 
+
+; RESET ENABLED by default (0: enabled, 2: disabled)
+            LD      (RESET_ENABLED),A 
+
+; ... and fill 1st entry with "return to basic"
+            LD      a,TYPE_EXIT_TO_BASIC 
+            LD      (CART_NAME_STRUCT),a 
+
+; disable blinking cursor on enabled interrupt
+            LD      hl,INT_DES 
+            SET     2,(hl) 
+
+            RET      
+
+            .INCLUDE multicart_v2.1_print_routines.z80 
+            .INCLUDE multicart_v2.1_dialogbox.z80 
+            .INCLUDE multicart_v2.1_input_routines.z80 
+            .INCLUDE multicart_v2.1_CAS_starter.z80 
+            .INCLUDE multicart_v2.1_save_routines.z80 
+            .INCLUDE multicart_v2.1_functions.z80 
+
+CODE_IN_CART:        
+            .PHASE  reloc 
+            .INCLUDE multicart_v2.1_ROM_check.z80 
+            .INCLUDE multicart_v2.1_RAM_check.z80 
+            .INCLUDE multicart_v2.1_images.z80 
+            .INCLUDE multicart_v2.1_flash.z80 
+            .INCLUDE multicart_v2.1_rename.z80 
+            .INCLUDE multicart_v2.1_sort.z80 
+            .INCLUDE multicart_v2.1_data.z80 
+            IF      LANG = EN 
+            .INCLUDE multicart_v2.1_data_str_en.z80 
+            ENDIF    
+            IF      LANG = HU 
+            .INCLUDE multicart_v2.1_data_str_hu.z80 
+            ENDIF
+            IF      LANG = ES
+            .INCLUDE multicart_v2.1_data_str_es.z80 
+            ENDIF    
+
+
+F_REWRITE_FLASH:     
+            CALL    f_winbond_write_128 
+
+            LD      A,0 
+            LD      (register),A 
+
+            LD      bc,TEST_CONTENT_END-TEST_CONTENT 
+            LD      hl,TEST_CONTENT 
+            LD      de,$CC00 
+            LDIR     
+            LD      bc,$0010 
+WAITREWRITE:         
+            DJNZ    WAITREWRITE 
+            DEC     C 
+            JR      nz,WAITREWRITE 
+
+            RET      
+
+
+F_WINBOND_WRITE_128:  
+;5555 AA
+;2AAA 55
+;5555 A0
+
+            LD      hl,$5555 
+            LD      d,$aa 
+            CALL    f_set_pages 
+
+            LD      hl,$2AAA 
+            LD      d,$55 
+            CALL    f_set_pages 
+
+            LD      hl,$5555 
+            LD      d,$A0 
+            CALL    f_set_pages 
+
+            RET      
+
+
+
+END_RELOC:           
+            .DEPHASE  
+
+            .INCLUDE multicart_v2.1_tests.z80 
+
+
+            .ORG    $EF00 
+PRINTPRG:            ; <last block>, <size of block>, <BASIC program: 10 PRINT 5>
+            DB      $FF,$08,$07,$0A,$00,$DD,$20,$35,$FF,$00 
+
+
+;            .org $C000 + 60*$100
+;            db 1,61
+;            .org $C000 + 61*$100
+;            db $ff,0
+
+            .ORG    BAM_START ; sector #2
+            FILL    $FF,8 ; first bank is allocated for firmware
+            DB      $ff,$ff,$f3,$ff ; 32 blocks
+            DB      $ff,$01,$00,$00 
+            .ORG    BAM_START+$0200 
+CART_NAMES:          
+            DB      1,0,0,0 
+            DB      EXIT_TO_BASIC 
+            DB      3,1,47,1 
+            DB      "print 5         " 
+            DB      2,1,2,2,$5F 
+            DB      "underscore     " 
+            DB      4,1,$3C,3 
+            DB      "zoli            " 
+            DB      3,1,$3A,2 
+            DB      "rladar          " 
+            DB      2,1,2,3,$7B 
+            DB      " valami        " 
+
+
+            FILL    $00,$14 
+
+LAST_ADDRESS:        
+
+
+
+
+

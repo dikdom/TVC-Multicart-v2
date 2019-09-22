@@ -1,0 +1,153 @@
+EXIT_TO_BASIC EQU   " EXIT to BASIC  " 
+STR_LANG_LETTER EQU "e" 
+
+
+STR_MESSAGE:         
+            DB      "Videoton TV Computer MultiCart ROM selection tool v" 
+STR_MESSAGE_END:     
+STR_RAM_FOUND:       
+            DB      "RAM detected: " 
+STR_RAM_FOUND_END:   
+STR_FLASH_FOUND:     
+            DB      "Flash detected: " 
+STR_FLASH_FOUND_END:  
+STR_FREE_SPACE:      
+            DB      "Free space on cart: " 
+STR_FREE_SPACE_END:  
+STR_BLOCKS:          
+            DB      " blocks" 
+STR_BLOCKS_END:      
+
+STR_FLASH_SIZES:     
+            DB      "none " 
+            DB      "128kB" 
+            DB      "256kB" 
+            DB      "512kB" 
+FLASH_SIZES_POS:     
+            DW      STR_FLASH_SIZES,STR_FLASH_SIZES+5,STR_FLASH_SIZES+10,STR_FLASH_SIZES,STR_FLASH_SIZES+15 
+STR_RAM_SIZES:       
+            DB      " none" 
+            DB      "  8kB" 
+            DB      " " 
+STR_CART_SIZE:       
+            DB      "16kB" 
+            DB      " 32kB" 
+            DB      " 64kB" 
+            DB      "128kB" 
+            DB      "256kB" 
+            DB      "512kB" 
+RAM_SIZES_POS:       
+;                   nincs        ,8kB            ,16kB            ,32kB            ,64kB            ,128kB           ,256kB           ,512kB
+            DW      STR_RAM_SIZES,STR_RAM_SIZES+5,STR_RAM_SIZES+10,STR_RAM_SIZES+15,STR_RAM_SIZES+20,STR_RAM_SIZES+25,STR_RAM_SIZES+30,STR_RAM_SIZES+35 
+STR_NAME:            
+            DB      "Name" 
+STR_NAME_END:        
+STR_SIZE:            
+            DB      "Size" 
+STR_SIZE_END:        
+STR_TYPE:            
+            DB      "Type" 
+STR_TYPE_END:        
+STR_USAGE:           
+            DB      "Usage:" 
+STR_USAGE_END:       
+STR_UPDN:            
+            DB      "Up/Down: A/Y or Joy Up/Down" 
+STR_UPDN_END:        
+STR_PGUPDN:          
+            DB      "Page up/down: " 
+            DB      129 
+            DB      "/: or Joy L/R" 
+STR_PGUPDN_END:      
+STR_TOGGLE_RESET:    
+            DB      "Toggle reset enable: Space" 
+STR_TOGGLE_RESET_END:  
+STR_START_PROGRAM:   
+            DB      "Start selected image: Return" 
+STR_START_PROGRAM_END:  
+STR_DELETE_PROGRAM:  
+            DB      "Delete selected image: Del" 
+STR_DELETE_PROGRAM_END:  
+STR_SORT_INSTRUCTIONS:  
+            DB      "Sort by Name,Type,Size: N,T,S" 
+STR_SORT_INSTRUCTIONS_END:  
+STR_SORT_RESET:      
+            DB      "Reset to Original order: O" 
+STR_SORT_RESET_END:  
+STR_RENAME:          
+            DB      "Rename selected file: R" 
+STR_RENAME_END:      
+STR_RESET_CART:      
+            DB      "Reset MultiCart on TVC reset: " 
+STR_RESET_CART_END:  
+STR_ENABLED:         
+            DB      "YES" 
+STR_ENABLED_END:     
+STR_DISABLED:        
+            DB      "NO " 
+STR_DISABLED_END:    
+STR_RAM_TEST:        
+            DB      "RAMTEST" 
+STR_RAM_TEST_END:    
+TEST_CONTENT:        
+            DB      "Test content, FLASH WRITTEN!..." 
+TEST_CONTENT_END:    
+
+STR_DELETE_QUESTION:  
+            DB      "Do you want to remove file:" 
+STR_DELETE_QUESTION_END:  
+STR_DELETE_ANSWER:   
+            DB      "Y/N" 
+STR_DELETE_ANSWER_END:  
+STR_FOUND_FLASH_CHIP:  
+            DB      "Found flash IC: " 
+STR_FOUND_FLASH_CHIP_END:  
+STR_FLASH_IC_UNKNOWN:  
+            DB      "unknown" 
+STR_FLASH_IC_UNKNOWN_END:  
+STR_FLASH_CREATE_WORK_COPY:  
+            DB      "Creating working copy..." 
+STR_FLASH_CREATE_WORK_COPY_END:  
+STR_FLASH_MODIFY_FS:  
+            DB      "Removing file from filesystem..." 
+STR_FLASH_MODIFY_FS_END:  
+STR_FLASH_UPDATE:    
+            DB      "Writing back data to flash IC..." 
+STR_FLASH_UPDATE_END:  
+STR_FLASH_DONE:      
+            DB      "Done." 
+STR_FLASH_DONE_END:  
+STR_FLASH_NOT_SUPPORTED:  
+            DB      "Deleting file is not supported." 
+STR_FLASH_NOT_SUPPORTED_END:  
+STR_FLASH_PRESS_SPACE:  
+            DB      "Press SPACE to continue!" 
+STR_FLASH_PRESS_SPACE_END:  
+
+STR_FLASH_RENAME_NOT_SUPPORTED:  
+            DB      "Renaming file is not supported." 
+STR_FLASH_RENAME_NOT_SUPPORTED_END:  
+
+STR_RENAME_Q_NEW_NAME:  
+            DB      "Enter the new name of the file:" 
+STR_RENAME_Q_NEW_NAME_END:  
+STR_RENAME_Q_INSTRUCTION:  
+            DB      "  (max 16 chars, ESC: cancel)" 
+STR_RENAME_Q_INSTRUCTION_END:  
+STR_TEST_CART_RAM:   
+            DB      "Test Cart RAM: M" 
+STR_TEST_CART_RAM_END:  
+STR_PASSED_SO_FAR:   
+            DB      "Passed: " 
+STR_PASSED_SO_FAR_END:  
+
+STR_TESTING_RAM:     
+            DB      "Testing MultiCart RAM..." 
+STR_TESTING_RAM_END:  
+STR_RAM_TEST_OK:     
+            DB      "MultiCart RAM test PASSED !" 
+STR_RAM_TEST_OK_END:  
+STR_RAM_TEST_NOK:    
+            DB      "MULTICART RAM TEST FAILED !!!" 
+STR_RAM_TEST_NOK_END:  
+

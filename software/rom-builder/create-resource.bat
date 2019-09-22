@@ -1,0 +1,1 @@
+lazres.exe tv21cartrom.lrs "multicart_v2.1.z80.bin"

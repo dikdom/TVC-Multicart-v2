@@ -1,0 +1,23 @@
+FLASH
+
+PLA
+Ez az IC felelős azért, hogy a multicart lapon a megfelelő komponensek a megfelelő időben lépjenek működésbe, a benne tárolt kód alapján. Pont, mint 
+a C64-ben a PLA chip. Gyakorlatilag egy karmester.
+Írd ki a  tvc-pla.bin  file-t a 128kB -os (SST39SF010A) chipre. Ha 512kB-osat használsz, akkor a felső (utolsó) 128kB-ra kell írni.
+A PLA chip a Multicart nyáklap bal oldalán lévő PLCC-32 -es chip, amelyik külön van bal oldalt.
+
+ROM
+A két ROM chip tartalmazza a TVC gép használható bővítését, 16kB -os bankokban. Az első 16kB-os bank speciális, azon van a Multicart firmware-e és a file foglaltsági
+térkép is (BAM). A maradék terület (kb 1008kB) tartalmazza a betöltendő file-okat. A bal oldali chip az első, a jobb oldali chip a második. 
+Az első IC a bal, a második a jobb foglalatba kerül, a közvetlen egymás mellett lévő foglalatok közül.
+
+A windows-os programmal lehet elkészíteni a nagy csipekre írandő image file-okat.
+Először is válaszd ki a flash chipek méretét (512kB - 512kB)
+Ellenőrizd, hogy a program jó firmware verziót és főképp jó nyelvű firmware-t talált. 
+Aztán add hozzá a .CAS és a cart image file-okat!
+Módosíthatód a file-ok neveit és a file-ok sorrendjét.
+
+Generáld le a két image file -t és a kedvenc IC íróddal írd meg a chipeket.
+
+
+Megjegyzés: használható AM29F040 chipek is az SST -k helyett, de azokra nem fogsz tudni BASIC programot kimenteni.

@@ -1,0 +1,956 @@
+; DIRECTORY Entry (22 bytes)
+; 
+; FILE NAME: 16 bytes, RPadded with space
+; TYPE     : 1 byte
+;              2-CART, 3-CAS, 4-BIN, 5-DAT
+; POINTER  : 2 bytes, bank and block where the file starts
+; SIZE     : 1 bytes, in blocks
+; INTERNAL DATA: 2 bytes, used by the CART firmware
+
+
+; Gets the first directory entry item and copies to the given
+; memory area pointed by DE (22 bytes)
+; INPUT
+;   DE : pointer to a 22 byte area where the directory entry will be
+;        copied
+; OUTPUT:
+;   flag Z
+;      set : NOK (no file in directory)
+;      clear: OK, structure filled
+;   the DE pointed structure is filled with the first directory entry
+GET_FIRST_DIRECTORY_ENTRY:  
+            LD      a,(BAM_START + $0214) 
+            OR      a 
+            RET     z 
+            PUSH    hl 
+            PUSH    bc 
+            CALL    L_FILL_DIRECTORY_STRUCUTRE 
+            PUSH    de 
+            LD      hl,BAM_START + $0214 + 4 
+            LD      bc,$10 
+            LDIR     
+            LD      hl,BAM_START + $0214 
+            LD      bc,4 
+            LDIR     
+            PUSH    de 
+            LD      de,$10 
+            ADD     hl,de 
+            POP     de 
+            LD      a,l 
+            LD      (de),a 
+            INC     de 
+            LD      a,h 
+            LD      (de),a 
+            POP     de 
+            POP     bc 
+            POP     hl 
+            RET      
+
+L_FILL_DIRECTORY_STRUCUTRE:  
+            PUSH    de 
+            XOR     a 
+            EX      de,hl 
+            LD      b,$16 
+L_FILL_STRUCTURE_LOOP:  
+            LD      (hl),a 
+            INC     hl 
+            DJNZ    L_FILL_STRUCTURE_LOOP 
+            POP     de 
+            DEC     b ; keep the Z flag clear
+            RET      
+
+
+; Gets the next directory entry item and copies to the given
+; memory area pointed by DE (22 bytes)
+; INPUT
+;   DE : pointer to a 32 byte area where the directory entry will be
+;        copied
+; OUTPUT:
+;   flag Z
+;      set : NOK (no more file in directory)
+;      clear: OK, structure filled with next directory entry
+;   the DE pointed structure is filled with the first directory entry
+GET_NEXT_DIRECTORY_ENTRY:  
+            PUSH    hl 
+            PUSH    de 
+            EX      de,hl 
+            LD      de,$14 
+            ADD     hl,de 
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) 
+            EX      de,hl 
+            LD      a,(hl) 
+            OR      a 
+            JR      z,L_NEXT_DIR_DONE 
+            POP     de 
+            PUSH    de 
+            PUSH    bc 
+            PUSH    hl 
+            INC     hl 
+            INC     hl 
+            INC     hl 
+            INC     hl 
+            LD      bc,$10 
+            LDIR     
+            POP     hl 
+            LD      bc,$04 
+            LDIR     
+            PUSH    de 
+            LD      de,$10 
+            ADD     hl,de 
+            POP     de 
+            LD      a,l 
+            LD      (de),a 
+            INC     de 
+            LD      a,h 
+            LD      (de),a 
+
+            POP     bc 
+L_NEXT_DIR_DONE:     
+            POP     de 
+            POP     hl 
+            RET      
+
+; Loads a file from TVC MultiCart v2 into TVC RAM. Caller must make sure that
+;   the $0003 shadow is set properly (U3 must be CART). During loading the 
+;   target address in U0, U1 and U2 memory mapping configuration is left as it 
+;   was when method was called, U3 is always RAM.
+;   File type can be CAS (0x03), BIN (0x04) and DAT (0x05).
+; Input: DE, contains a pointer to the following 21 bytes long structure:
+;   TEMP_AREA_PTR (2 bytes):
+;     pointer to a 128 byte area where a temp routine can be copied to.
+;     It must point into either one of U0,U1 or U2.
+;   DEST_ADDR (2 bytes)
+;     the destination address of the loaded program. Should not overlap with the
+;     temp routine
+;   FILE_TYPE (1 byte):
+;     file type, must match with the stored file. Must be 3 or bigger!
+;     In case of BIN (0x04) and the start addr is 0x0000 then the file will be
+;     loaded to the address defined by the first two bytes of the file itself.
+;   FILE_NAME (16 bytes)
+;     string of 16 chars, name of the file to be loaded. If a prefix is given
+;     which shorter than 16-chars then the string shall be terminated by 0x00.
+;  Output: Z flag
+;    set:   file not found
+;    clear: file is loaded
+
+LOAD_FILE_TO_TVCRAM:  
+            PUSH    bc 
+            PUSH    hl 
+            PUSH    de 
+            LD      hl,BAM_START+$0200+$14 
+L_COPY_FILE_LOOP:    
+            LD      a,(hl) 
+            OR      a 
+            JR      z,L_NO_FILE_FOUND 
+            PUSH    hl 
+            LD      hl,$04 
+            ADD     hl,de 
+            CP      (hl) 
+            POP     hl 
+            JR      z,L_FILE_TYPE_MATCHES 
+L_FILE_DOESNT_MATCH:  
+            PUSH    de 
+            LD      de,$14 
+            ADD     hl,de 
+            POP     de 
+            JR      L_COPY_FILE_LOOP 
+L_FILE_TYPE_MATCHES:  
+            PUSH    hl 
+            PUSH    de 
+            LD      de,$04 
+            ADD     hl,de 
+            POP     de 
+            PUSH    de 
+            PUSH    hl 
+            LD      hl,$05 
+            ADD     hl,de 
+            EX      de,hl ; de points to name to find
+            POP     hl ; hl points to actual name
+            LD      b,$10 
+L_COPY_FILE_FILENAME_COMP_LOOP:  
+            LD      a,(de) 
+            OR      a 
+            JR      z,L_FILE_FOUND 
+            CP      (hl) 
+            JR      nz,L_FILENAME_DOESNT_MATCH 
+            INC     de 
+            INC     hl 
+            DEC     b 
+            JR      nz,L_COPY_FILE_FILENAME_COMP_LOOP 
+L_FILE_FOUND:        
+            POP     de 
+            POP     hl 
+            JR      L_COPY_FILE_ROUTINE 
+L_FILENAME_DOESNT_MATCH:  
+            POP     de 
+            POP     hl 
+            JR      L_FILE_DOESNT_MATCH 
+L_NO_FILE_FOUND:     
+            XOR     a ; set Z
+            POP     de 
+            POP     hl 
+            POP     bc 
+            RET      
+L_COPY_FILE_ROUTINE:  
+            PUSH    hl 
+            PUSH    de 
+            EX      de,hl 
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) 
+            PUSH    de 
+            LD      hl,COPY_FILE_TVCRAM_ROUTINE 
+            LD      bc,COPY_FILE_TVCRAM_ROUTINE_END - COPY_FILE_TVCRAM_ROUTINE 
+            LDIR     
+            POP     hl ; hl contains the temp area address, the jump target
+            POP     de ; de contains the address of input data buffer
+            POP     bc ; bc contains the directory entry, temporarily
+            CALL    TVCRAM_CALLER_ROUTINE 
+            POP     de 
+            POP     hl 
+            POP     bc 
+            RET      
+TVCRAM_CALLER_ROUTINE:  
+            JP      (hl) 
+
+COPY_FILE_TVCRAM_ROUTINE:  
+            EX      de,hl 
+            INC     hl 
+            INC     hl 
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) ; de contains target address of file
+            INC     hl 
+            XOR     a 
+            CP      e 
+            JR      nz,L_DADDR_SET_PROPERLY 
+            CP      d 
+            JR      nz,L_DADDR_SET_PROPERLY 
+            LD      a,$04 ; BIN
+            CP      (hl) 
+            JR      nz,L_DADDR_SET_PROPERLY 
+            PUSH    bc 
+            POP     hl 
+            INC     hl 
+            LD      a,(hl) ; bank
+            INC     hl 
+            LD      d,(hl) ; block
+            LD      ($C002),a ; switch bank, no reset on read
+            LD      e,$00 
+            LD      hl,$c000 
+            ADD     hl,de 
+
+            PUSH    hl 
+            LD      b,(hl) 
+            INC     hl 
+            LD      c,(hl) 
+            INC     hl 
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) 
+            JR      L_LOAD_BIN_FIRST_ENTRY 
+
+L_DADDR_SET_PROPERLY:  
+            PUSH    bc 
+            POP     hl ; hl contains source directory entry
+            INC     hl ; in dir entry, the byte 01/02 contains the bank/block address
+; byte 00 is type, byte 03 is size in blocks
+L_COPY_FILE_COPY_LOOP:  
+            PUSH    de 
+            LD      a,(hl) ; bank
+            INC     hl 
+            LD      d,(hl) ; block
+            LD      ($C002),a ; switch bank, no reset on read
+            LD      e,$00 
+            LD      hl,$c000 
+            ADD     hl,de 
+            POP     de 
+            PUSH    hl 
+            LD      b,(hl) 
+            INC     hl 
+            LD      c,(hl) 
+L_LOAD_BIN_FIRST_ENTRY:  
+            INC     hl 
+            PUSH    bc 
+            LD      a,$FF ; last block?
+            CP      b 
+            JR      z,L_COPY_FILE_BLOCKSIZE_SET 
+            LD      c,$FE 
+L_COPY_FILE_BLOCKSIZE_SET:  
+            LD      b,$00 
+            LD      a,$BE ; If target is BF00 or higher..
+            CP      d 
+            JR      c,L_COPY_UNDER_U3 
+            LDIR     
+            POP     bc 
+            LD      a,$FF 
+            CP      b 
+            POP     hl 
+            JR      nz,L_COPY_FILE_COPY_LOOP 
+            JR      L_COPY_FILE_DONE 
+L_COPY_UNDER_U3:     
+            LD      b,c 
+L_COPY_U3_LOOP:      
+            LD      c,(hl) 
+            LD      a,($0003) 
+            AND     $3F 
+            OR      $80 
+            OUT     ($02),a 
+            LD      a,c 
+            LD      (de),a 
+            LD      a,($0003) 
+            OUT     ($02),a 
+            INC     hl 
+            INC     de 
+            DJNZ    L_COPY_U3_LOOP 
+            LD      a,$FF 
+            POP     bc 
+            CP      b 
+            POP     hl 
+            JR      nz,L_COPY_FILE_COPY_LOOP 
+
+L_COPY_FILE_DONE:    
+            XOR     a ; reset multicart, set bank #0, reset-on-read enabled
+            LD      ($C000),a 
+            DEC     a 
+            RET      
+COPY_FILE_TVCRAM_ROUTINE_END:  
+
+
+; Saves a file to TVC MultiCart v2 from TVC RAM. Caller must make sure that
+;   the $0003 shadow is set properly (U3 must be CART). Source U0, U1 and U2
+;   memory mapping configuration is left as it was when method was called,
+;   source U3 is always RAM.
+;   This method requires at least 16kB RAM on Multicart v2 and uses the
+;   first 12kB on the bank #0 of the cart RAM!
+; Input: DE, contains a pointer to the following structure:
+;   TEMP_AREA_PTR (2 bytes):
+;     pointer to a 256 byte area where a helper temp routing can be copied to.
+;     It must point into either one of U0,U1 or U2.
+;   SRC_ADDR (2 bytes):
+;     pointer to the start address of the program to be saved
+;   SIZE (2 bytes):
+;     size of program in bytes
+;   FILE_TYPE (1 byte)
+;     file type, see above
+;   OVERWRITE_FLAG (1 byte)
+;     0: only creates, fails if file exists
+;     1: creates or overwrites if exists
+;     2: only overwrites, fails if file doesn't exists
+;   FILE_NAME (16 bytes):
+;     null-terminated string of max 16 chars, name of the file to be saved.
+;     Filename will be RPadded with 0x20 to 16 chars long.
+;  Output: A
+;    0x00 - OK, file saved
+;    0x01 - Not enough CART RAM found
+;    0x02 - File exists and cannot be overwritten
+;    0x03 - File doesn't exist and cannot be created
+;    0x04 - Not enough free space on CART FLASH
+;    0x05 - Flash type is not supported
+
+;  temp addr + $fd : cached BANK
+;  temp addr + $fe : cached BLOCK
+
+ERR_OK equ $00
+ERR_NOT_ENOUGH_CART_RAM equ $01
+ERR_FILE_EXIST equ $02
+ERR_FILE_DOESNT_EXIST equ $03
+ERR_NOT_ENOUGH_FREE_SPACE equ $04
+ERR_FLASH_NOT_SUPPORTED equ $05
+
+
+CACHED_DIRECTORY_ENTRY EQU -2 
+CACHED_BANK EQU     -4 
+CACHED_BLOCK EQU    -3 
+
+TEMP_AREA_SIZE_SAVE EQU $0100
+
+SAVE_FILE_TO_MULTICART:  
+            PUSH    bc 
+            PUSH    hl 
+            PUSH    de ; input structure address
+            POP     ix ; ix contains the input structure address
+            PUSH    de 
+            EX      de,hl 
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) 
+            PUSH    de ; temporary target area
+            ld hl,TEMP_AREA_SIZE_SAVE
+            add hl,de
+            PUSH    hl 
+            POP     iy ; IY contains the temp address + TEMP_AREA_SIZE_SAVE (end+1 of temp addr)
+            LD      hl,L_SAVE_CHECK_RAM 
+            LD      bc,L_SAVE_CHECK_RAM_END - L_SAVE_CHECK_RAM 
+            LDIR     
+            POP     hl 
+            PUSH    hl ; temporary target area
+            CALL    TVCRAM_CALLER_ROUTINE 
+            POP     de ; temporary target area
+            JR      z,L_PROCEED_TO_FLASH_CHECK 
+            LD      a,ERR_NOT_ENOUGH_CART_RAM ; nz, RAM test failed!
+            JP      L_SAVE_FILE_FINISHED 
+L_PROCEED_TO_FLASH_CHECK:  
+            PUSH    de ; temporary target area
+            LD      hl,L_SAVE_CHECK_FLASH 
+            LD      bc,L_SAVE_CHECK_FLASH_END - L_SAVE_CHECK_FLASH 
+            LDIR     
+            POP     hl 
+            PUSH    hl ; temporary target area
+            CALL    TVCRAM_CALLER_ROUTINE 
+            POP     de ; temporary target area
+            JR      z,L_PROCEED_TO_FILE_EXIST_CHECK 
+            LD      a,ERR_FLASH_NOT_SUPPORTED
+            JP      L_SAVE_FILE_FINISHED 
+L_PROCEED_TO_FILE_EXIST_CHECK:  
+            XOR     a ; last two bytes of temp area shows dir entry, 0 otherwise
+            LD      (IY + CACHED_DIRECTORY_ENTRY),a 
+            LD      (IY + CACHED_DIRECTORY_ENTRY + 1),a 
+
+            POP     hl ; input structure address
+            PUSH    hl 
+            LD      de,$0008 
+            ADD     hl,de 
+            EX      de,hl ; DE points to the filename in input structure
+            LD      hl,BAM_START + $0214 
+L_FILE_SAVE_FILE_EXISTS_CHECK_LOOP:  
+            PUSH    de 
+            PUSH    hl 
+            XOR     a 
+            CP      (hl) ; check file type. In case 0x00, end of dir entries
+            JR      z,L_FILE_SAVE_FILE_DOESNT_EXIST 
+            INC     hl 
+            INC     hl 
+            INC     hl 
+            INC     hl ; hl points to the file names position
+            LD      bc,$0010 
+L_FILE_SAVE_FILE_NAME_CHECK_LOOP:  
+            LD      a,(de) 
+            CP      $00 
+            JR      z,L_FILE_SAVE_FILE_EXISTS 
+            CPI      
+            JR      nz,L_FILE_DONT_MATCH 
+            INC     de 
+            JP      po,L_FILE_SAVE_FILE_NAME_CHECK_LOOP 
+L_FILE_DONT_MATCH:   
+            POP     hl 
+            LD      de,$0014 
+            ADD     hl,de 
+            POP     de 
+            JR      L_FILE_SAVE_FILE_EXISTS_CHECK_LOOP 
+L_FILE_SAVE_FILE_DOESNT_EXIST:  
+            POP     hl 
+            POP     de 
+            DEC     de ; de points to OVERWRITE_FLAG
+            LD      a,(de) 
+            CP      $02 ; only overwrite allowed?
+            JR      nz,L_FILE_SAVE_CREATE_FILE 
+            LD      a,ERR_FILE_DOESNT_EXIST
+            JP      L_SAVE_FILE_FINISHED 
+L_FILE_SAVE_FILE_EXISTS:  
+            POP     hl 
+            POP     de 
+            DEC     de 
+            LD      a,(de) 
+            CP      $00 ; is overwrite allowed
+            JR      nz,L_SAVE_FILE_RELEASE_FILE 
+            LD      a,ERR_FILE_EXIST 
+            JP      L_SAVE_FILE_FINISHED
+L_SAVE_FILE_RELEASE_FILE:
+            
+L_FILE_SAVE_CREATE_FILE:  
+; let's check first the available space
+            CALL    CALCULATE_AVAILABLE_SPACE 
+            POP     de 
+            PUSH    de 
+            INC     de 
+            INC     de 
+            INC     de 
+            INC     de 
+            EX      de,hl 
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) 
+            DEC     de 
+            INC     d 
+            LD      a,$00 
+            CP      b 
+            JR      nz,L_FILE_SAVE_THERE_IS_ENOUGH_SPACE 
+            LD      a,c 
+            CP      d 
+            JR      nc,L_FILE_SAVE_THERE_IS_ENOUGH_SPACE 
+            LD      a,ERR_NOT_ENOUGH_FREE_SPACE 
+            JP      L_SAVE_FILE_FINISHED 
+L_FILE_SAVE_THERE_IS_ENOUGH_SPACE:  
+            POP     hl 
+            PUSH    hl ; hl contains the address to input structure
+            PUSH    de ; d contains the size of the file in blocks
+            INC     hl 
+            INC     hl 
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) 
+            PUSH    de ; de contains the target address (temp area) 
+            LD      bc,L_CREATE_FILE_ENTRY_IN_MULTICART_RAM_END-L_CREATE_FILE_ENTRY_IN_MULTICART_RAM
+            LD      hl,L_CREATE_FILE_ENTRY_IN_MULTICART_RAM
+            LDIR     
+            POP     hl ; hl contains the target address
+            pop     de ; d contains the size of the file in blocks
+            push    hl
+            CALL    TVCRAM_CALLER_ROUTINE
+            
+            
+            pop de  ; temp area
+            push de
+            ld hl,L_CREATE_FILE_IN_MULTICART
+            ld bc,L_CREATE_FILE_IN_MULTICART_END - L_CREATE_FILE_IN_MULTICART
+            ldir
+; L_MODIFY_TARGET_1
+            pop de ; target of the temp area
+            push de
+            ld hl,(L_STORE_SECTOR - L_CREATE_FILE_IN_MULTICART) ; offset of store_sector
+            add hl,de
+            push hl
+            ld hl,(L_MODIFY_TARGET_1 - L_CREATE_FILE_IN_MULTICART + 1) ; offset of modification
+            add hl,de
+            pop bc
+            ld (hl),c
+            inc hl
+            ld (hl),b
+
+            pop hl
+            CALL    TVCRAM_CALLER_ROUTINE
+            
+            JR      L_SAVE_FILE_FINISHED_OK 
+
+L_SAVE_FILE_OVERWRITE_FILE:  
+
+
+L_SAVE_FILE_FINISHED_OK:  
+            XOR     a 
+L_SAVE_FILE_FINISHED:  
+            POP     de 
+            POP     hl 
+            POP     bc 
+            RET      
+
+L_SAVE_CHECK_RAM:    
+            LD      a,RAM 
+            LD      ($C000),a 
+
+            LD      b,$08 
+            LD      hl,$D000 
+            LD      de,$0400 
+L_SAVE_CHECK_RAM_LOOP:  
+            XOR     a 
+            LD      (hl),a 
+            CP      (hl) 
+            JR      nz,L_RAM_CHECK_FAILED 
+            LD      a,$55 
+            LD      (hl),a 
+            CP      (hl) 
+            JR      nz,L_RAM_CHECK_FAILED 
+            LD      a,$AA 
+            LD      (hl),a 
+            CP      (hl) 
+            JR      nz,L_RAM_CHECK_FAILED 
+            LD      a,$FF 
+            LD      (hl),a 
+            CP      (hl) 
+            JR      nz,L_RAM_CHECK_FAILED 
+            ADD     hl,de 
+            DJNZ    L_SAVE_CHECK_RAM_LOOP 
+L_RAM_CHECK_FAILED:  
+            PUSH    af ; flags must be retained!
+            XOR     a 
+            LD      ($C000),a 
+            POP     af 
+            RET      
+L_SAVE_CHECK_RAM_END:  
+
+; SAVE supported only on SST39SF040, xx020, xx010 chips
+L_SAVE_CHECK_FLASH:  
+            LD      a,$01 
+            LD      ($C000),a 
+            LD      a,$AA 
+            LD      ($1555 + $C000),a 
+
+            XOR     a 
+            LD      ($C000),a 
+            LD      a,$55 
+            LD      ($2AAA + $C000),a 
+
+            LD      a,$01 
+            LD      ($C000),a 
+            LD      a,$90 
+            LD      ($1555 + $C000),a 
+
+            XOR     a 
+            LD      ($C000),a 
+
+            LD      a,($C000) 
+            LD      b,a 
+            LD      a,($C001) 
+            LD      c,a 
+
+            LD      a,$BF 
+            CP      b 
+            RET     nz ; not SST
+
+            LD      a,$B7 ; 040
+            CP      c 
+            RET     z 
+            DEC     a ; $B6 - 020
+            CP      c 
+            RET     z 
+            DEC     a ; $B5 - 010
+            CP      c 
+
+            RET      
+L_SAVE_CHECK_FLASH_END:  
+
+
+CALCULATE_AVAILABLE_SPACE:  ; in BC, num of free blocks
+            LD      hl,BAM_START 
+            LD      de,0 
+L_CAS_LOOP:          
+            LD      b,8 
+            LD      a,(hl) 
+L_CAS_ONEBYTE_LOOP:  
+            BIT     0,a 
+            JR      nz,L_CAS_NEXT_CYCLE 
+            INC     de 
+L_CAS_NEXT_CYCLE:    
+            RRA      
+            DJNZ    L_CAS_ONEBYTE_LOOP 
+            INC     hl 
+            LD      a,$F2 
+            JR      nz,L_CAS_LOOP 
+            PUSH    de 
+            POP     bc 
+            RET      
+
+L_CREATE_FILE_ENTRY_IN_MULTICART_RAM:
+            push de ; d contains the size of the file
+            LD      hl,BAM_START ; copy BAM to first bank or RAM, $D000
+            LD      de,$D000 
+            LD      bc,$10ff 
+            LD      a,RAM 
+            EX      af,af' ; RAM -> A backup
+L_CREATE_BAM_COPY_LOOP:  
+            LD      a,(hl) 
+            EX      af,af' 
+            LD      ($C000),a 
+            EX      af,af' 
+            LD      (de),a 
+            XOR     a 
+            LD      ($C000),a 
+            INC     de 
+            INC     hl 
+            DEC     bc 
+            XOR     a 
+            CP      b 
+            JR      nz,L_CREATE_BAM_COPY_LOOP 
+            LD      hl,$D014 
+            LD      de,$0014 
+            LD      a,RAM 
+            LD      ($C000),a 
+            XOR     a 
+            POP     bc ; b contains the size of the file
+L_CREATE_FILE_SEARCH_LAST_ENTRY_LOOP:  
+            CP      (hl) 
+            JR      z,L_LAST_ENTRY_FOUND 
+            ADD     hl,de 
+            JR      L_CREATE_FILE_SEARCH_LAST_ENTRY_LOOP 
+
+L_LAST_ENTRY_FOUND:  
+            push ix
+            POP     de ; pointer to the input structure
+            PUSH    de 
+            PUSH    hl ; pointer to the new entry in CARTRAM
+            LD      hl,$0006 
+            ADD     hl,de ; points to filetype in input structure
+            POP     de ; pointer to the new entry
+            PUSH    de 
+            LD      a,(hl) 
+            LD      (de),a 
+            INC     de 
+            INC     de 
+            INC     de 
+            EX      de,hl 
+            LD      (hl),b ; file size
+            INC     hl 
+            LD      a,$20 
+            LD      b,$10 
+L_CREATE_FILE_FILL_FILENAME_LOOP:  
+            LD      (hl),a 
+            INC     hl 
+            DJNZ    L_CREATE_FILE_FILL_FILENAME_LOOP 
+            XOR     a 
+            LD      (hl),a ; must store 0x00 after the last entry
+
+            LD      (IY + CACHED_BANK),a ; prevoiusly loaded bank
+            LD      (IY + CACHED_BLOCK),a ; prevoiusly loaded block
+
+            LD      bc,$0100 ; b: bank, c:block
+            LD      hl,$D008 ; start at second bank
+L_SEARCH_FIRST_FREE_BLOCK_BYTE_LOOP:  
+            LD      d,8 
+            LD      a,(hl) 
+L_SEARCH_FIRST_FREE_BLOCK_LOOP:  
+            BIT     0,a 
+            JR      z,L_FIRST_EMPTY_BLOCK_FOUND 
+            INC     c 
+            LD      a,$40 
+            CP      c 
+            JR      nz,L_SEARCH_FIRST_FREE_BLOCK_BANK_OK 
+            LD      c,0 
+            INC     b 
+L_SEARCH_FIRST_FREE_BLOCK_BANK_OK:  
+            RRA      
+            DEC     d 
+            JR      nz,L_SEARCH_FIRST_FREE_BLOCK_LOOP 
+            INC     hl 
+            JR      L_SEARCH_FIRST_FREE_BLOCK_BYTE_LOOP 
+L_FIRST_EMPTY_BLOCK_FOUND:  
+            POP     hl ; pointer to the new entry
+            POP     de ; pointer to the input data
+            PUSH    de 
+            PUSH    hl 
+            INC     hl 
+            LD      (hl),b 
+            INC     hl 
+            LD      (hl),c 
+
+            LD      hl,$0004 
+            ADD     hl,de ; hl points to the size of the file
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) 
+            DEC     de 
+            INC     d 
+            POP     hl ; no need anymore the new file entry
+            INC     hl 
+            INC     hl 
+            INC     hl 
+            LD      (hl),d ; size of file in occupied blocks
+
+; -------------
+; ------------- ~$80 bytes of code ------------
+; -------------
+            ret
+; -------------
+; -------------
+L_CREATE_FILE_ENTRY_IN_MULTICART_RAM_END:
+
+
+L_CREATE_FILE_IN_MULTICART:
+            LD      bc,$0100 ; b: bank, c:block
+            LD      hl,$D008 ; start at second bank
+L_SEARCH_FREE_BLOCK_BYTE_LOOP:  
+            LD      d,8 
+            LD      a,(hl) 
+L_SEARCH_FREE_BLOCK_LOOP:  
+            BIT     0,a 
+            JR      z,L_EMPTY_BLOCK_FOUND 
+L_SEARCH_FREE_BLOCK_LOOP_CONTINUE:  
+            INC     c
+            ex af,af'
+            LD      a,$40 
+            CP      c 
+            JR      nz,L_SEARCH_FREE_BLOCK_BANK_OK 
+            LD      c,0 
+            INC     b 
+L_SEARCH_FREE_BLOCK_BANK_OK:  
+            ex af,af'
+            RRA      
+            DEC     d 
+            JR      nz,L_SEARCH_FREE_BLOCK_LOOP 
+            INC     hl 
+            JR      L_SEARCH_FREE_BLOCK_BYTE_LOOP 
+L_EMPTY_BLOCK_FOUND:  
+            PUSH    bc 
+            PUSH    de 
+            PUSH    hl 
+            PUSH    af 
+
+            LD      a,b 
+            CP      (IY + CACHED_BANK) 
+            JR      nz,L_REFRESH_CACHE 
+            LD      a,c 
+            AND     1111000b 
+            LD      a,(IY + CACHED_BLOCK) 
+            JR      nz,L_REFRESH_CACHE
+L_CACHE_IS_FRESH:    
+            jr L_COPY_BLOCK
+            POP     af 
+            POP     hl 
+            POP     de 
+            POP     bc
+            push af
+            push bc
+            
+            ld a,c
+            and 00000111b
+            cp $00
+            ld b,a
+            ld a,1
+            jr z,L_SHIFT_DONE
+            or a ; Clear C
+L_SHIFT_BIT:
+            RLA
+            djnz L_SHIFT_BIT
+L_SHIFT_DONE:
+            or (hl)
+            ld (hl),a
+
+            pop af
+            pop bc
+            JR      L_SEARCH_FREE_BLOCK_LOOP_CONTINUE 
+
+L_REFRESH_CACHE:     
+            XOR     a 
+            CP      (IY + CACHED_BANK) 
+;            JR      nz,L_STORE_SECTOR
+L_MODIFY_TARGET_1:
+            call nz,L_STORE_SECTOR
+L_REFRESH_CACHE_CONTINUE:
+            LD      a,b 
+            LD      ($C000),a ; bank mapped
+            LD      (IY + CACHED_BANK),A 
+            LD      a,c 
+            LD      (IY + CACHED_BLOCK),A 
+            AND     0011000b 
+            LD      a,$C0 
+            ADD     a,c 
+            LD      h,a 
+            LD      l,$00 ; source set
+            LD      de,$E000 ; target address
+
+            LD      a,c 
+            LD      bc,$10FF 
+L_SAVE_FILE_COPY_BANK_TO_CACHE_SECTOR_LOOP:  
+            LD      ($C002),a 
+            EX      af,af' ; source bank in A backup
+            ld a,($0003)
+            and 00111111b
+            or $80
+            out ($02),a
+            LD      a,(hl) 
+            PUSH    af 
+            ld a,($0003)
+            out ($02),a
+            LD      a,RAM ; RAM 0th bank
+            LD      ($C002),a 
+            POP     AF 
+            LD      (de),a 
+            INC     de 
+            INC     hl 
+            DEC     bc 
+            XOR     a 
+            CP      b 
+            EX      af,af' 
+            JR      nz,L_SAVE_FILE_COPY_BANK_TO_CACHE_SECTOR_LOOP 
+            JR      L_CACHE_IS_FRESH
+L_COPY_BLOCK:
+            NOP
+L_STORE_SECTOR:      
+            PUSH    hl 
+            PUSH    de 
+            PUSH    bc 
+            LD      a,(IY + CACHED_BANK) 
+            LD      b,a ; bank
+            LD      a,(IY + CACHED_BLOCK) 
+            AND     00110000b 
+            LD      c,a ; C contains sector address in CHIP
+; sector erase
+            LD      a,$01 ; $AA -> $5555
+            LD      ($C002),a 
+            LD      a,$AA 
+            LD      ($C000 + $1555),a 
+
+            XOR     a ; $55 -> $2AAA
+            LD      ($C002),a 
+            LD      a,$55 
+            LD      ($C000 + $2AAA),a 
+
+            LD      a,$01 ; $80 -> $5555
+            LD      ($C002),a 
+            LD      a,$80 
+            LD      ($C000 + $1555),a 
+
+            LD      a,$AA ; $AA -> $5555
+            LD      ($C000 + $1555),a 
+
+            XOR     a ; $55 -> $2AAA
+            LD      ($C002),a 
+            LD      a,$55 
+            LD      ($C000 + $2AAA),a 
+
+            LD      a,b 
+            LD      ($C002),a 
+
+            LD      a,c 
+            ADD     a,$C0 
+            LD      h,a 
+            LD      l,$75 ; to avoid writing to the Multicart register
+            LD      a,$30 
+L_CREATE_FILE_ERASE_SECTOR_POLLING_LOOP:
+            LD      (hl),a 
+            bit 7,a
+            jr z,L_CREATE_FILE_ERASE_SECTOR_POLLING_LOOP
+            ld a,RAM ; 0. bank of multicart, RAM selected
+            ld ($C002),a
+            ld d,h
+            ld e,0 ; target sector to write
+            ld hl,$E000 ; source of cached sector
+            ld a,c
+            ex af,af' ; a backup contains bank of multicart to write to
+            ld bc,$10FF
+L_STORE_FILE_SECTOR_WRITE_LOOP:
+            ld a,(hl)
+            push af
+            LD      a,$01 ; $AA -> $5555
+            LD      ($C002),a 
+            LD      a,$AA 
+            LD      ($C000 + $1555),a 
+
+            XOR     a ; $55 -> $2AAA
+            LD      ($C002),a 
+            LD      a,$55 
+            LD      ($C000 + $2AAA),a 
+
+            LD      a,$01 ; $A0 -> $5555
+            LD      ($C002),a 
+            LD      a,$A0 
+            LD      ($C000 + $1555),a 
+
+            ex af,af'
+            ld ($C002),a
+            ex af,af'
+            pop af
+            ld (de),a
+            ex de,hl
+L_STORE_FILE_ONE_BYTE_WRITE_LOOP:
+            cp (hl) ; it would enough to test bit#7, 
+            jr nz,L_STORE_FILE_ONE_BYTE_WRITE_LOOP
+            ex de,hl
+            
+            inc de ; 6T
+            inc hl ; 6T
+            dec bc ; 6T
+            xor a ; 4T
+            cp b  ; 4T
+            jr nz, L_STORE_FILE_SECTOR_WRITE_LOOP; 12T
+; done writing back cache!
+
+            POP     bc 
+            POP     de 
+            POP     hl
+            jp L_REFRESH_CACHE_CONTINUE
+L_CREATE_FILE_IN_MULTICART_END:  
+
+
+

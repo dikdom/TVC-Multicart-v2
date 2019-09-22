@@ -1,0 +1,46 @@
+STR_AUTHOR:          
+            DB      "by Sanyi (2018-03-30 - 2019-08-09)" 
+STR_AUTHOR_END:      
+
+STR_MOPS:            
+            DB      "MOPS" 
+STR_MOPS_END:        
+STR_TYPE_SIZE_BAS:   
+            DB      "----" 
+STR_TYPE_SIZE_BAS_END:  
+STR_TYPE_CART:       
+            DB      "CART" 
+STR_TYPE_CART_END:   
+STR_TYPE_CAS:        
+            DB      " CAS" 
+STR_TYPE_CAS_END:    
+STR_TYPE_BIN:        
+            DB      " BIN" 
+STR_TYPE_BIN_END:    
+STR_TYPE_DAT:        
+            DB      "DATA" 
+STR_TYPE_DAT_END:    
+
+STR_FLASH_IC_SST:    
+            DB      "SST39SF0x0" 
+STR_FLASH_IC_SST_END:  
+STR_FLASH_IC_AMD:    
+            DB      "AM29F0x0" 
+STR_FLASH_IC_AMD_END:  
+STR_FLASH_IC_ATMEL:  
+            DB      "AT29C0x0" 
+STR_FLASH_IC_ATMEL_END:  
+STR_ABC_ORDER:       
+            DB      "a" 
+            DB      $90 ; á
+            DB      "bcde" 
+            DB      $91 ; é
+            DB      "fghi" 
+            DB      $92 ; í
+            DB      "jklmno" 
+            DB      $93,$94,$95 ; ó, ö, ő
+            DB      "pqrstu" 
+            DB      $96,$97,$98 ; ú, ü, ű
+            DB      "vwxyz" 
+STR_ABC_ORDER_END:   
+

@@ -1,0 +1,360 @@
+object Form1: TForm1
+  Left = 489
+  Height = 503
+  Top = 114
+  Width = 896
+  Caption = 'TVC MultiCart ROM Maker - v2.1+'
+  ClientHeight = 483
+  ClientWidth = 896
+  Constraints.MinHeight = 375
+  Constraints.MinWidth = 675
+  Menu = MainMenu1
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  LCLVersion = '1.8.2.0'
+  object ListBox1: TListBox
+    AnchorSideTop.Control = GroupBox3
+    AnchorSideBottom.Control = Button1
+    Left = 657
+    Height = 437
+    Top = 8
+    Width = 232
+    Anchors = [akTop, akRight, akBottom]
+    ItemHeight = 0
+    OnClick = ListBox1Click
+    OnDblClick = ListBox1DblClick
+    OnKeyPress = ListBox1KeyPress
+    OnKeyDown = ListBox1KeyDown
+    OnKeyUp = ListBox1KeyUp
+    OnMouseDown = ListBox1MouseDown
+    OnMouseMove = ListBox1MouseMove
+    OnMouseUp = ListBox1MouseUp
+    TabOrder = 0
+  end
+  object Button1: TButton
+    AnchorSideLeft.Control = ListBox1
+    AnchorSideTop.Control = ListBox1
+    AnchorSideTop.Side = asrBottom
+    Left = 657
+    Height = 25
+    Top = 450
+    Width = 104
+    Anchors = [akLeft, akBottom]
+    BorderSpacing.Top = 5
+    Caption = 'Add Files'
+    OnClick = Button1Click
+    TabOrder = 1
+  end
+  object GroupBox3: TGroupBox
+    Left = 12
+    Height = 202
+    Top = 8
+    Width = 420
+    Caption = 'ROM'
+    ClientHeight = 182
+    ClientWidth = 416
+    TabOrder = 2
+    OnClick = GroupBox3Click
+    object GroupBox1: TGroupBox
+      Left = 16
+      Height = 129
+      Top = 16
+      Width = 97
+      Caption = 'Flash1'
+      ClientHeight = 109
+      ClientWidth = 93
+      TabOrder = 0
+      object RadioButton1: TRadioButton
+        Left = 8
+        Height = 19
+        Top = 0
+        Width = 49
+        Caption = 'None'
+        Enabled = False
+        TabOrder = 2
+      end
+      object RadioButton2: TRadioButton
+        Tag = 128
+        Left = 8
+        Height = 19
+        Top = 26
+        Width = 51
+        Caption = '128kB'
+        OnChange = GroupBox3Click
+        TabOrder = 3
+      end
+      object RadioButton3: TRadioButton
+        Tag = 256
+        Left = 8
+        Height = 19
+        Top = 52
+        Width = 51
+        Caption = '256kB'
+        OnChange = GroupBox3Click
+        TabOrder = 0
+      end
+      object RadioButton4: TRadioButton
+        Tag = 512
+        Left = 8
+        Height = 19
+        Top = 78
+        Width = 51
+        Caption = '512kB'
+        Checked = True
+        OnChange = GroupBox3Click
+        TabOrder = 1
+        TabStop = True
+      end
+    end
+    object GroupBox2: TGroupBox
+      Left = 129
+      Height = 129
+      Top = 16
+      Width = 97
+      Caption = 'Flash2'
+      ClientHeight = 109
+      ClientWidth = 93
+      TabOrder = 1
+      object RadioButton5: TRadioButton
+        Left = 8
+        Height = 19
+        Top = 0
+        Width = 49
+        Caption = 'None'
+        OnChange = GroupBox3Click
+        TabOrder = 3
+      end
+      object RadioButton6: TRadioButton
+        Tag = 128
+        Left = 8
+        Height = 19
+        Top = 26
+        Width = 51
+        Caption = '128kB'
+        OnChange = GroupBox3Click
+        TabOrder = 0
+      end
+      object RadioButton7: TRadioButton
+        Tag = 256
+        Left = 8
+        Height = 19
+        Top = 52
+        Width = 51
+        Caption = '256kB'
+        OnChange = GroupBox3Click
+        TabOrder = 1
+      end
+      object RadioButton8: TRadioButton
+        Tag = 512
+        Left = 8
+        Height = 19
+        Top = 78
+        Width = 51
+        Caption = '512kB'
+        Checked = True
+        OnChange = GroupBox3Click
+        TabOrder = 2
+        TabStop = True
+      end
+    end
+    object Label1: TLabel
+      Left = 16
+      Height = 15
+      Top = 152
+      Width = 84
+      Caption = 'Available space:'
+      ParentColor = False
+    end
+    object Label2: TLabel
+      Left = 129
+      Height = 15
+      Top = 153
+      Width = 34
+      Caption = 'Label2'
+      ParentColor = False
+    end
+    object GroupBox4: TGroupBox
+      AnchorSideLeft.Control = GroupBox2
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = GroupBox2
+      AnchorSideBottom.Control = GroupBox2
+      AnchorSideBottom.Side = asrBottom
+      Left = 242
+      Height = 129
+      Top = 16
+      Width = 160
+      Anchors = [akTop, akLeft, akBottom]
+      BorderSpacing.Left = 16
+      Caption = 'Firmware Image'
+      ClientHeight = 109
+      ClientWidth = 156
+      TabOrder = 2
+      object Label3: TLabel
+        Left = 8
+        Height = 15
+        Top = 8
+        Width = 34
+        Caption = 'Label3'
+        ParentColor = False
+      end
+      object Button3: TButton
+        Left = 16
+        Height = 25
+        Top = 72
+        Width = 131
+        Caption = 'Set MC ROM Image'
+        OnClick = Button3Click
+        TabOrder = 0
+      end
+    end
+  end
+  object Button2: TButton
+    AnchorSideTop.Control = ListBox1
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Side = asrBottom
+    AnchorSideBottom.Side = asrBottom
+    Left = 785
+    Height = 25
+    Top = 450
+    Width = 104
+    Anchors = [akRight, akBottom]
+    BorderSpacing.Top = 5
+    Caption = 'Clear'
+    OnClick = Button2Click
+    TabOrder = 3
+  end
+  object PaintBox1: TPaintBox
+    AnchorSideTop.Control = GroupBox3
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = ListBox1
+    AnchorSideBottom.Side = asrBottom
+    Left = 12
+    Height = 256
+    Top = 213
+    Width = 640
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    BorderSpacing.Top = 3
+    BorderSpacing.Right = 5
+    Color = clGray
+    Enabled = False
+    ParentColor = False
+    OnClick = PaintBox1Click
+    OnPaint = PaintBox1Paint
+  end
+  object Edit1: TEdit
+    Left = 504
+    Height = 23
+    Top = 8
+    Width = 80
+    MaxLength = 16
+    OnChange = Edit1Change
+    OnEditingDone = Edit1EditingDone
+    OnExit = Edit1Exit
+    OnKeyPress = Edit1KeyPress
+    OnKeyUp = Edit1KeyUp
+    TabOrder = 4
+    Text = 'Edit1'
+    Visible = False
+  end
+  object OpenDialog1: TOpenDialog
+    Title = 'Add image files to the TVC Multicart'
+    Filter = 'Cartridge images|*.crt;*.bin;*.rom|CAS files|*.cas|Cartridge images and CAS files|*.cas;*.bin;*.rom*;*.crt|All files|*.*'
+    FilterIndex = 3
+    InitialDir = '.'
+    Options = [ofAllowMultiSelect, ofExtensionDifferent, ofFileMustExist, ofEnableSizing, ofViewDetail]
+    left = 464
+    top = 32
+  end
+  object MainMenu1: TMainMenu
+    left = 464
+    top = 144
+    object MenuItem1: TMenuItem
+      Caption = '&File'
+      object MenuItem6: TMenuItem
+        Caption = '&New'
+        OnClick = MenuItem6Click
+      end
+      object MenuItem2: TMenuItem
+        Caption = '&Open'
+        OnClick = MenuItem2Click
+      end
+      object MenuItem3: TMenuItem
+        Caption = '&Save'
+        ShortCut = 16467
+        OnClick = MenuItem3Click
+      end
+      object MenuItem12: TMenuItem
+        Caption = 'Save As...'
+        OnClick = MenuItem12Click
+      end
+      object MenuItem5: TMenuItem
+        Caption = '-'
+      end
+      object MenuItem4: TMenuItem
+        Caption = 'E&xit'
+        OnClick = MenuItem4Click
+      end
+    end
+    object MenuItem7: TMenuItem
+      Caption = 'Export ROM Image'
+      OnClick = MenuItem7Click
+    end
+  end
+  object SaveDialog1: TSaveDialog
+    Title = 'Exporting the TVC Multicart ROM images'
+    DefaultExt = '.bin'
+    Options = [ofPathMustExist, ofEnableSizing, ofViewDetail]
+    left = 528
+    top = 89
+  end
+  object OpenDialog2: TOpenDialog
+    Title = 'Opening TVC MultiCart boot image'
+    Filter = 'Binary image|*.rom; *.bin|All files|*.*'
+    InitialDir = '.\'
+    left = 528
+    top = 32
+  end
+  object TaskDialog1: TTaskDialog
+    Buttons = <>
+    Caption = 'Error!'
+    CommonButtons = [tcbOk]
+    RadioButtons = <>
+    left = 464
+    top = 89
+  end
+  object PopupMenu1: TPopupMenu
+    left = 528
+    top = 144
+    object MenuItem8: TMenuItem
+      Caption = 'Rename'
+      OnClick = MenuItem8Click
+    end
+    object MenuItem9: TMenuItem
+      Caption = 'Move Up'
+      OnClick = MenuItem9Click
+    end
+    object MenuItem10: TMenuItem
+      Caption = 'Move Down'
+      OnClick = MenuItem10Click
+    end
+    object MenuItem11: TMenuItem
+      Caption = 'Delete'
+      OnClick = MenuItem11Click
+    end
+  end
+  object SaveDialog2: TSaveDialog
+    Title = 'Saving the  TVC Multicart image compilation'
+    DefaultExt = '.tvc'
+    Filter = 'TVC MultiCart ROMs|*.tvc|All files|*.*'
+    Options = [ofPathMustExist, ofEnableSizing, ofViewDetail]
+    left = 592
+    top = 32
+  end
+  object OpenDialog3: TOpenDialog
+    Title = 'Opening previously saved TVC Multicart image compilation'
+    DefaultExt = '.tvc'
+    Filter = 'TVC MultiCart ROMs|*.tvc|All files|*.*'
+    left = 592
+    top = 89
+  end
+end

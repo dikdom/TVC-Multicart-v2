@@ -1,0 +1,134 @@
+F_COPY_BASIC_INIT:
+			ld bc,F_COPY_CAS_FROM_CART_END - F_COPY_CAS_FROM_CART
+            ld de,TEMP_MEMORY_U0
+            ld hl,F_COPY_CAS_FROM_CART
+            ldir
+            ret
+
+F_COPY_CAS_FROM_CART:
+			.phase TEMP_MEMORY_U0
+CURRENT_TVC_POS:
+			dw 0
+CURRENT_CART_POS:
+			DW 0
+CURRENT_NUM_OF_COPIED_BYTES:
+			DW 0
+REMAINIG_SIZE_OF_CAS:
+			DW 0
+REMAINING_BYTES_IN_BANK:
+			DW 0
+CAS_BYTES_ABOVE_C000:
+			dw 0
+BANK_SELECT:
+			DB 0
+
+            .include multicart_v2.1_BASIC.z80
+
+F_COPY_BIN_FROM_CART_INU0:
+            inc HL
+            ld A,(hl) ; bank
+            inc HL
+            ld D,(hl) ; sector
+            ld (REGISTER_DISABLE_RESET),A
+            ld A,$C0
+            ADD A,D
+            LD H,a
+            ld L,0
+            push HL
+            ld bc,$00FE
+            ld a,(hl) ; bank of next block or $FF in case of last block
+            cp $FF
+            jr nz,L_BIN_BLOCK_SIZE_OK
+            inc hl
+            ld c,(hl)
+            dec hl
+L_BIN_BLOCK_SIZE_OK:
+            inc hl
+            inc hl
+            ld e,(hl)
+            inc hl
+            ld d,(hl)
+            ld (CURRENT_TVC_POS),de
+            jr CC_COPY_ONE_SECTOR
+
+            ; input
+            ; - HL: pointer to 4byte image record
+F_COPY_CAS_FROM_CART_INU0:
+            ld de,BASIC_PROGRAM_START
+            ld (CURRENT_TVC_POS),de
+            
+            ; get the FIRST 256 byte sector
+            inc HL
+            ld A,(hl) ; bank
+            inc HL
+            ld D,(hl) ; sector
+            ld (REGISTER_DISABLE_RESET),A
+            ld A,$C0
+            ADD A,D
+            LD H,a
+            ld L,0
+            push HL
+            
+CC_LOOP_SECTOR_COPY:
+            LD a,(HL)
+            CP $FF
+            ld bc,$00FE
+            INC HL
+            jr nz,CC_COPY_ONE_SECTOR
+            ld C,(hl) ; adjust block size
+CC_COPY_ONE_SECTOR:
+			INC HL
+            ld de,(CURRENT_TVC_POS)
+            ; HL, DE, BC: source, target, copy-block size
+            ; check if copy would go to U3
+            push de
+            push hl
+            ex de,hl
+            add hl,bc
+            ld a,$BF
+            cp h
+            pop hl
+            pop de
+            jr c,CC_COPY_INTO_U3 ; yes, need to copy into U3
+            ldir                 ; no, copy simple
+CC_FINISHED_COPY:
+            ld (CURRENT_TVC_POS),de
+            pop HL
+            ld a,(hl)
+            cp $FF
+            jr z,CC_EXIT
+            INC HL
+            ld D,(hl)
+            ld (REGISTER_DISABLE_RESET),A
+            LD A,$C0
+            ADD A,D
+            OUT (0),A
+            LD H,A
+            ld L,0
+            push HL
+            jr CC_LOOP_SECTOR_COPY
+CC_COPY_INTO_U3:
+			ld b,c
+CC_COPY_INTO_U3_LOOP:
+			ld c,(HL)
+            EX DE,HL
+            ld a,$B0  ; (U0-U1-U2-U3)
+            OUT (2),A
+            ld (hl),C
+            ld a,$30  ; (U0-U1-U2-CART)
+            OUT (2),A
+            EX DE,HL
+            INC DE
+            INC HL
+            DJNZ CC_COPY_INTO_U3_LOOP
+            JR CC_FINISHED_COPY
+CC_EXIT:
+            inc de
+            ld (TVC_TOP),de
+            xor a ; sideeffect: keeps Z set 
+            ld (REGISTER),a
+            out (0),a
+            RET
+           
+            .dephase
+F_COPY_CAS_FROM_CART_END:

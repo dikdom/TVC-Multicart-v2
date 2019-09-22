@@ -1,0 +1,628 @@
+TVC_BAM_COPY_ADDRESS EQU $6000 
+
+F_DELETE_SELECTED_FROM_FLASH:  
+            LD      de,STR_FOUND_FLASH_CHIP 
+            LD      bc,STR_FOUND_FLASH_CHIP_END-STR_FOUND_FLASH_CHIP 
+            XOR     a 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            LD      a,(FLASH1_TYPE) 
+            CP      $01 ; check AMD
+            JP      z,DELETE_FOR_AMD 
+
+            CP      $02 ; check SST
+            JP      z,DELETE_FOR_SST 
+
+            CP      $03 ; check ATmel
+            JP      z,DELETE_FOR_ATMel 
+
+            LD      de,STR_FLASH_IC_UNKNOWN 
+            LD      bc,STR_FLASH_IC_UNKNOWN_END-STR_FLASH_IC_UNKNOWN 
+            LD      a,2 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            LD      de,STR_FLASH_NOT_SUPPORTED 
+            LD      bc,STR_FLASH_NOT_SUPPORTED_END-STR_FLASH_NOT_SUPPORTED 
+            XOR     a 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+
+            RET      
+
+NUM_OF_SST_SECTORS:  
+            DB      0 
+TARGET_HIGH_SST:     
+            DB      0 
+BAM_START_SST:       
+            DW      0 
+REGISTER_TO_USE:     
+            DW      0 
+REGISTER_VALUE:      
+            DB      0 
+
+
+DELETE_FOR_SST:      
+            LD      de,STR_FLASH_IC_SST 
+            LD      bc,STR_FLASH_IC_SST_END-STR_FLASH_IC_SST 
+            LD      a,2 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            LD      de,STR_FLASH_CREATE_WORK_COPY 
+            LD      bc,STR_FLASH_CREATE_WORK_COPY_END-STR_FLASH_CREATE_WORK_COPY 
+            XOR     a 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            CALL    COPY_SST_BAM_DIR ; OK
+
+            LD      de,STR_FLASH_MODIFY_FS 
+            LD      bc,STR_FLASH_MODIFY_FS_END-STR_FLASH_MODIFY_FS 
+            XOR     a 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            CALL    remove_from_bam_sst ; OK
+            CALL    move_sst_dir_entries ; OK
+            CALL    move_sst_cart_records ; OK
+            CALL    fix_sst_cart_record_pointers ; OK
+
+            LD      de,STR_FLASH_UPDATE 
+            LD      bc,STR_FLASH_UPDATE_END-STR_FLASH_UPDATE 
+            XOR     a 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            CALL    WRITE_BACK_BAM_SST ; OK
+            CALL    fix_pointers ; OK
+
+            LD      de,STR_FLASH_DONE 
+            LD      bc,STR_FLASH_DONE_END-STR_FLASH_DONE 
+            XOR     a 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            RET      
+
+DELETE_FOR_AMD:      
+            LD      de,STR_FLASH_IC_AMD 
+            LD      bc,STR_FLASH_IC_AMD_END-STR_FLASH_IC_AMD 
+            LD      a,2 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            LD      de,STR_FLASH_NOT_SUPPORTED 
+            LD      bc,STR_FLASH_NOT_SUPPORTED_END-STR_FLASH_NOT_SUPPORTED 
+            XOR     a 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            RET      
+
+DELETE_FOR_ATMEL:    
+            LD      de,STR_FLASH_IC_ATMEL 
+            LD      bc,STR_FLASH_IC_ATMEL_END-STR_FLASH_IC_ATMEL 
+            LD      a,2 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            LD      de,STR_FLASH_NOT_SUPPORTED 
+            LD      bc,STR_FLASH_NOT_SUPPORTED_END-STR_FLASH_NOT_SUPPORTED 
+            XOR     a 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            RET      
+
+
+COPY_SST_BAM_DIR:    
+            XOR     a 
+            LD      (REGISTER_DISABLE_RESET),a 
+            LD      de,$C000 
+L_NEXT_TRY:          
+            LD      hl,BAM_START 
+            XOR     a 
+            SBC     hl,de 
+            LD      a,h 
+            CP      $10 
+            JP      m,L_START_COPY 
+            EX      de,hl 
+            LD      de,$1000 
+            ADD     hl,de 
+            EX      de,hl 
+            JR      L_NEXT_TRY 
+L_START_COPY:        
+            PUSH    de ; start the copy from here
+            LD      a,d 
+            LD      (TARGET_HIGH_SST),a 
+
+            LD      hl,BAM_START 
+            XOR     a 
+            SBC     hl,de 
+            LD      de,TVC_BAM_COPY_ADDRESS 
+            ADD     hl,de 
+            LD      (BAM_START_SST),hl 
+
+            LD      a,(NUM_OF_IMAGES) 
+            LD      c,a 
+            INC     c 
+            CALL    MUL_C_BY_14H 
+            LD      bc,$0001 
+            XOR     a 
+            SBC     hl,bc 
+            LD      de,$0200 
+            ADD     hl,de 
+            LD      de,BAM_START 
+            ADD     hl,de 
+
+            POP     de 
+            PUSH    hl ; last pos of DIR
+            LD      hl,NUM_OF_SST_SECTORS 
+            XOR     a 
+            LD      (hl),a 
+            EX      de,hl 
+            LD      de,TVC_BAM_COPY_ADDRESS 
+
+L_COPY_ONE_SECTOR:   
+            PUSH    hl 
+            LD      hl,NUM_OF_SST_SECTORS 
+            INC     (hl) 
+            POP     hl 
+            LD      bc,$1000 
+            LDIR     
+            POP     bc 
+            PUSH    bc 
+            LD      a,b 
+            CP      h 
+            JP      p,L_COPY_ONE_SECTOR 
+            POP     bc 
+            XOR     a 
+            LD      (REGISTER),a 
+            RET      
+
+REMOVE_FROM_BAM_SST:  
+            LD      a,(LIST_FIRST_ELEMENT) 
+            LD      d,a 
+            LD      a,(LIST_SELECTED_ELEMENT) 
+            ADD     a,d 
+            LD      l,a 
+            LD      h,0 
+            SLA     l 
+            RL      h 
+            SLA     l 
+            RL      h 
+            LD      de,CART_NAME_STRUCT 
+            ADD     hl,de ; points to the record in CART_NAME_STRUCT
+            LD      a,(hl) ; type of image
+            INC     hl ; 
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) 
+            EX      de,hl ; hl points to the record in DIRECTORY
+            CP      2 ; cart
+            JR      z,L_REMOVE_CART_SST 
+            CP      3 ; cas
+            JR      z,L_REMOVE_CAS_SST 
+            CP      4 ; bin
+            JR      z,L_REMOVE_CAS_SST 
+L_REMOVE_CART_SST:   
+            INC     hl 
+            LD      a,(hl) ; a is the bank of the cart
+            INC     hl 
+            INC     hl 
+            LD      b,(hl) ; b is the size in block of the cart
+            LD      l,a 
+            LD      h,0 
+            SLA     l ; mul by 8
+            RL      h 
+            SLA     l 
+            RL      h 
+            SLA     l 
+            RL      h 
+            LD      de,(BAM_START_SST) 
+            ADD     hl,de 
+L_CART_FULL_BYTE_REMOVAL_SST:  
+            LD      a,7 
+            CP      b 
+            JP      p,L_LAST_FRACTION_SST 
+            LD      a,b 
+            SUB     8 
+            LD      b,a 
+            XOR     a 
+            LD      (hl),a 
+            INC     hl 
+            JR      L_CART_FULL_BYTE_REMOVAL_SST 
+L_LAST_FRACTION_SST:  
+            XOR     a 
+            CP      b 
+            JR      z,L_DONE_REMOVE_SST 
+L_MASK_LOOP_SST:     
+            SCF      
+            RLA      
+            DJNZ    L_MASK_LOOP_SST 
+            CPL      
+            AND     (hl) 
+            LD      (hl),a 
+            JR      L_DONE_REMOVE_SST 
+
+L_REMOVE_CAS_SST:    
+            INC     hl 
+L_REMOVE_CAS_SST_LOOP:  
+            LD      b,(hl) ; b is the next bank of the cas
+            INC     hl 
+            LD      c,(hl) ; c is the next block of the cas
+            LD      a,$ff ; no more blocks - this cannot happen in DIRECTORY!
+            CP      b 
+            JR      z,L_DONE_REMOVE_CAS_SST 
+            LD      l,b 
+            LD      h,0 
+; 8 bytes describe one bank
+            SLA     l 
+            RL      h 
+            SLA     l 
+            RL      h 
+            SLA     l 
+            RL      h 
+
+            LD      de,(BAM_START_SST) 
+            ADD     hl,de 
+            LD      d,c 
+L_STEP_TO_ALLOCATION_BYTE:  
+            LD      a,$07 
+            CP      d 
+            JP      p,L_ALLOCATION_BYTE_FOUND 
+            LD      a,d 
+            SUB     8 
+            LD      d,a 
+            INC     hl 
+            JR      L_STEP_TO_ALLOCATION_BYTE 
+L_ALLOCATION_BYTE_FOUND:  
+            XOR     a 
+            CP      d 
+            JR      z,L_ALLOCATION_BIT_FOUND 
+            INC     a 
+            DEC     d 
+            JR      z,L_ALLOCATION_BIT_FOUND 
+L_STEP_TO_ALLOCATION_BIT:  
+            SLA     a 
+            DEC     d 
+            JR      nz,L_STEP_TO_ALLOCATION_BIT 
+L_ALLOCATION_BIT_FOUND:  
+            CPL      
+            AND     (hl) 
+            LD      (hl),a 
+
+            LD      a,b 
+            LD      (register_disable_reset),a 
+            LD      l,0 
+            LD      h,c 
+            LD      de,$C000 
+            ADD     hl,de 
+            JR      L_REMOVE_CAS_SST_LOOP 
+
+L_DONE_REMOVE_CAS_SST:  
+            XOR     a 
+            LD      (register),a 
+
+L_DONE_REMOVE_SST:   
+            RET      
+
+
+MOVE_SST_DIR_ENTRIES:  
+            LD      a,(LIST_FIRST_ELEMENT) 
+            LD      d,a 
+            LD      a,(LIST_SELECTED_ELEMENT) 
+            ADD     a,d 
+
+            LD      l,a 
+            LD      h,0 
+            SLA     l 
+            RL      h 
+            SLA     l 
+            RL      h 
+            LD      de,CART_NAME_STRUCT + 1 ; no need for INC HL
+            ADD     hl,de ; points to the record in CART_NAME_STRUCT
+; inc HL is not needed because of DE initialization
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) 
+            EX      de,hl 
+            OR      a 
+            LD      de,BAM_START 
+            SBC     hl,de 
+            LD      de,(BAM_START_SST) 
+            ADD     hl,de 
+
+
+;            LD      c,a
+;            CALL    MUL_C_BY_14h
+;            LD      de,(BAM_START_SST)
+;            ADD     hl,de
+;            LD      de,$0200
+;            ADD     hl,de ; position of selected item in RAM
+
+            PUSH    hl 
+
+            LD      a,(NUM_OF_IMAGES) 
+            LD      c,a 
+            CALL    MUL_C_BY_14h 
+            LD      de,(BAM_START_SST) 
+            ADD     hl,de 
+            LD      de,$0200 
+            ADD     hl,de ; position of last item in RAM
+            POP     de ; pos of selected item in RAM
+
+            PUSH    de 
+
+            XOR     a 
+            SBC     HL,DE ; diff between them
+            LD      bc,hl 
+            EX      de,hl 
+            LD      de,$0014 
+            ADD     hl,de ; copy from
+
+            POP     de ; copy to
+            XOR     a ; check if bc $0000
+            CP      b 
+            JR      nz,L_DO_THE_DIR_MOVE_SST 
+            CP      c 
+            JR      nz,L_DO_THE_DIR_MOVE_SST 
+            JR      L_DIR_MOVE_DONE_SST 
+L_DO_THE_DIR_MOVE_SST:  
+            LDIR     
+            XOR     a ; 00 after last entry
+L_DIR_MOVE_DONE_SST:  
+            LD      (de),a 
+            RET      
+
+MOVE_SST_CART_RECORDS:  
+            LD      a,(LIST_FIRST_ELEMENT) 
+            LD      d,a 
+            LD      a,(LIST_SELECTED_ELEMENT) 
+            ADD     a,d 
+            LD      l,a ; abs position in list
+            LD      a,(NUM_OF_IMAGES) 
+            SUB     l 
+;            CP      0 ; don't copy if last element is selected
+;            JR      z,L_SST_CART_RECS_DONE
+
+            PUSH    af ; a: count of recs
+
+            XOR     a 
+            LD      h,a 
+
+            SLA     l 
+            RL      h 
+            SLA     l 
+            RL      h 
+            LD      de,CART_NAME_STRUCT 
+            ADD     hl,de 
+            POP     bc 
+            LD      c,b 
+            LD      b,$00 
+            SLA     c 
+            RL      b 
+            SLA     c 
+            RL      b 
+
+            PUSH    hl ; target
+            LD      de,$0004 
+            ADD     hl,de ; source
+            POP     de ; target
+
+            XOR     a 
+            CP      b 
+            JR      nz,L_MOVE_SST_CART_RECS 
+            CP      c 
+            JR      z,L_SST_CART_RECS_DONE 
+L_MOVE_SST_CART_RECS:  
+            LDIR     
+L_SST_CART_RECS_DONE:  
+            XOR     a 
+            LD      (de),a 
+            RET      
+
+FIX_SST_CART_RECORD_POINTERS:  
+            LD      a,(LIST_FIRST_ELEMENT) 
+            LD      d,a 
+            LD      a,(LIST_SELECTED_ELEMENT) 
+            ADD     a,d 
+
+            LD      c,a 
+            CALL    MUL_C_BY_14h ; result in HL
+            LD      de,BAM_START 
+            ADD     hl,de 
+            LD      de,$0200 
+            ADD     hl,de 
+
+; compare to hl all pointers. Bigger: must decrement by $14
+            LD      de,CART_NAME_STRUCT 
+            INC     de 
+            INC     de 
+            INC     de 
+            INC     de 
+            PUSH    de 
+            POP     ix 
+            LD      a,(NUM_OF_IMAGES) 
+            LD      b,a 
+L_FIX_STRUCT_LOOP:   
+            LD      d,(IX+2) 
+            LD      e,(IX+1) 
+            LD      a,d 
+            CP      h 
+            JR      c,L_NO_NEED_TO_FIX 
+            JR      nz,L_FIXIT 
+            LD      a,e ; h and d are equal
+            CP      l 
+            JR      c,L_NO_NEED_TO_FIX 
+L_FIXIT:             
+            PUSH    hl 
+            EX      de,hl 
+            LD      de,$0014 
+            SCF      
+            CCF      
+            SBC     hl,de 
+            EX      de,hl 
+            LD      (ix+2),d 
+            LD      (ix+1),e 
+            POP     hl 
+
+L_NO_NEED_TO_FIX:    
+            INC     ix 
+            INC     ix 
+            INC     ix 
+            INC     ix 
+            DJNZ    L_FIX_STRUCT_LOOP 
+            RET      
+
+
+WRITE_BACK_BAM_SST:  
+            LD      a,$C0 
+            LD      (register_to_use+1),a 
+
+            LD      a,(TARGET_HIGH_SST) 
+            LD      d,a 
+            XOR     a 
+            LD      (register_value),a 
+            LD      (register_to_use),a 
+
+            LD      e,a 
+            LD      hl,TVC_BAM_COPY_ADDRESS 
+
+            LD      a,d 
+            CP      $C0 
+            JR      nz,L_SKIP_RELOC 
+            LD      a,REGREL 
+            LD      ($C000),a 
+            LD      (register_value),a 
+            LD      a,$E0 
+            LD      (register_to_use+1),a 
+
+L_SKIP_RELOC:        
+L_WRITE_SECTOR_SST_LOOP:  
+            CALL    INIT_SST_SECTOR_ERASE 
+            LD      bc,$0000 
+
+L_WRITE_ONE_SECTOR_SST:  
+            PUSH    hl 
+            PUSH    de 
+; 
+            LD      e,0 
+            LD      hl,$5555 
+            LD      d,$AA 
+            CALL    f_set_pages 
+
+            LD      hl,$2AAA 
+            LD      d,$55 
+            CALL    f_set_pages 
+
+            LD      hl,$5555 
+            LD      d,$A0 
+            CALL    f_set_pages 
+            LD      a,(REGISTER_VALUE) 
+            LD      hl,(REGISTER_TO_USE) 
+            LD      (hl),a 
+            POP     de 
+            POP     hl 
+
+            LD      a,(hl) 
+            LD      (de),a 
+            INC     de 
+            INC     hl 
+            INC     bc 
+            LD      a,b 
+            CP      $10 
+            JR      nz,L_WRITE_ONE_SECTOR_SST 
+
+            LD      a,d 
+            CP      $D0 
+            JR      nz,L_SKIP_BACKLOC 
+            XOR     a 
+            LD      hl,REGISTER_TO_USE 
+            LD      (hl),a 
+L_SKIP_BACKLOC:      
+            LD      a,(NUM_OF_SST_SECTORS) 
+            DEC     a 
+            LD      (NUM_OF_SST_SECTORS),a 
+            CP      $0 
+            JR      nz,L_WRITE_SECTOR_SST_LOOP 
+
+            RET      
+
+
+INIT_SST_SECTOR_ERASE:  
+            PUSH    hl 
+            PUSH    de 
+            LD      e,0 ; probably not relevant, 'cos sector start is $x000
+            LD      hl,$5555 
+            LD      d,$AA 
+            CALL    f_set_pages 
+
+            LD      hl,$2AAA 
+            LD      d,$55 
+            CALL    f_set_pages 
+
+            LD      hl,$5555 
+            LD      d,$80 
+            CALL    f_set_pages 
+; 
+            LD      hl,$5555 
+            LD      d,$AA 
+            CALL    f_set_pages 
+
+            LD      hl,$2AAA 
+            LD      d,$55 
+            CALL    f_set_pages 
+
+            POP     de 
+            EX      de,hl 
+
+            LD      a,$30 
+            LD      (hl),a 
+
+L_POLLING:           
+            LD      a,(hl) 
+            AND     $80 
+            JR      z,L_POLLING 
+; 
+            EX      de,hl 
+            POP     hl 
+            RET      
+
+
+MUL_C_BY_14H:        
+            LD      l,c 
+            LD      h,0 
+            LD      b,4 
+L_MUL_LOOP_1:        
+            SLA     l 
+            RL      h 
+            DJNZ    L_MUL_LOOP_1 
+            PUSH    hl 
+
+            LD      l,c 
+            LD      h,0 
+            LD      b,2 
+L_MUL_LOOP_2:        
+            SLA     l 
+            RL      h 
+            DJNZ    L_MUL_LOOP_2 
+            POP     de 
+            ADD     hl,de 
+            RET      
+
+FIX_POINTERS:        
+            LD      hl,NUM_OF_IMAGES 
+            DEC     (hl) 
+            LD      a,(LIST_FIRST_ELEMENT) 
+            LD      d,a 
+            LD      a,(LIST_SELECTED_ELEMENT) 
+            ADD     a,d 
+            LD      c,a 
+            LD      a,(hl) 
+            CP      c 
+            JP      p,L_POINTERS_DONE 
+            LD      hl,LIST_SELECTED_ELEMENT 
+            LD      a,(hl) 
+            CP      0 
+            JR      z,L_DEC_FIRST_POS 
+            DEC     (hl) 
+            JR      L_POINTERS_DONE 
+L_DEC_FIRST_POS:     
+            LD      hl,LIST_FIRST_ELEMENT 
+            DEC     (hl) 
+L_POINTERS_DONE:     
+            RET      
+
+

@@ -1,0 +1,298 @@
+F_CHECK_RAM_SIZE:    
+            CALL    F_FILL_RAM 
+            LD      c,0 
+            LD      a,RAM + REGREL 
+            LD      (register),a 
+
+            LD      hl,$C000 ; Check 1st byte of RAM (8k?)
+            CALL    f_check_byte 
+            JR      nz,check_ram_exit 
+; 8kRAM OK
+            CALL    F_COPY_TVC 
+            LD      c,1 ; means 8kB RAM
+
+            LD      a,RAM 
+            LD      (register_reloc),a 
+            LD      hl,$E000 ; Check 16k RAM
+            CALL    f_check_tvc 
+            JR      z,check_ram_exit 
+            INC     c ; 16kRAM OK
+
+            LD      a,RAM + REGREL + 1 ; Check 32k RAM
+            LD      (register),a 
+            LD      hl,$C000 
+            CALL    f_check_tvc 
+            JR      z,check_ram_exit 
+            INC     c ; 32kRAM OK
+
+            LD      a,RAM + REGREL + 2 ; Check 64k RAM
+            LD      (register_reloc),a 
+            LD      hl,$C000 
+            CALL    f_check_tvc 
+            JR      z,check_ram_exit 
+            INC     c ; 64kRAM OK
+
+            LD      a,RAM + REGREL + 4 ; Check 128k RAM
+            LD      (register_reloc),a 
+            LD      hl,$C000 
+            CALL    f_check_tvc 
+            JR      z,check_ram_exit 
+            INC     c ; 128kRAM OK
+
+            LD      a,RAM + REGREL + 8 ; Check 256k RAM
+            LD      (register_reloc),a 
+            LD      hl,$C000 
+            CALL    f_check_tvc 
+            JR      z,check_ram_exit 
+            INC     c ; 256kRAM OK
+
+            LD      a,RAM + REGREL + 16 ; Check 512k RAM
+            LD      (register_reloc),a 
+            LD      hl,$C000 
+            CALL    f_check_tvc 
+            JR      z,check_ram_exit 
+            INC     c ; 512kRAM OK
+
+CHECK_RAM_EXIT:      
+            LD      a,c 
+            LD      (SIZE_OF_CART_RAM),a 
+            XOR     A 
+            LD      (register_reloc),a 
+            LD      (register),a 
+            RET      
+
+F_FILL_RAM:          
+            LD      c,0 
+            LD      a,REGREL 
+            LD      (register),a 
+FR_LOOP:             
+            LD      a,RAM+REGREL 
+            OR      c 
+            LD      (REGISTER_RELOC),a 
+            XOR     A 
+            LD      hl,$c000 
+            LD      b,STR_RAM_TEST_END-STR_RAM_TEST 
+FR_LOOP_IN:          
+            LD      (HL),a 
+            INC     HL 
+            DJNZ    fr_loop_in 
+            INC     c 
+            LD      a,$40 
+            CP      c 
+            JR      nz,fr_loop 
+
+            XOR     a 
+            LD      (register_reloc),a 
+            RET      
+
+F_CHECK_BYTE:        
+            LD      a,$55 
+            LD      (hl),a 
+            CP      (hl) 
+            JR      nz,CHECK_BYTE_EXIT 
+            LD      a,$AA 
+            LD      (hl),a 
+            CP      (hl) 
+            JR      nz,CHECK_BYTE_EXIT 
+            LD      a,$00 
+            LD      (hl),a 
+            CP      (hl) 
+            JR      nz,CHECK_BYTE_EXIT 
+            LD      a,$FF 
+            LD      (hl),a 
+            CP      (hl) 
+CHECK_BYTE_EXIT:     
+            RET      
+
+F_COPY_TVC:          
+            LD      DE,$C000 
+            LD      bc,STR_RAM_TEST_END-STR_RAM_TEST 
+            LD      HL,STR_RAM_TEST 
+            LDIR     
+            RET      
+
+F_CHECK_TVC:         
+            LD      b,STR_RAM_TEST_END-STR_RAM_TEST 
+            LD      de,STR_RAM_TEST 
+CT_LOOP:             
+            LD      a,(hl) 
+            EX      de,hl 
+            CP      (hl) 
+            EX      de,hl 
+            INC     de 
+            INC     hl 
+            JR      nz,check_tvc_exit 
+            DJNZ    ct_loop 
+CHECK_TVC_EXIT:      
+            RET      
+
+
+RAM_TEST_DIALOG_X EQU 15 
+RAM_TEST_DIALOG_Y EQU 9 
+RAM_TEST_DIALOG_W EQU 34 
+RAM_TEST_DIALOG_H EQU 6 
+
+F_CART_RAM_TEST:     
+            LD      bc,RAM_TEST_DIALOG_X*256+RAM_TEST_DIALOG_Y ; x;y => 15;9
+            LD      de,RAM_TEST_DIALOG_W*256+RAM_TEST_DIALOG_H ; w;h => 34;6
+            CALL    f_show_dialog_box 
+
+            LD      de,STR_TESTING_RAM 
+            LD      bc,STR_TESTING_RAM_END-STR_TESTING_RAM 
+            LD      a,3 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            LD      de,STR_PASSED_SO_FAR 
+            LD      bc,STR_PASSED_SO_FAR_END-STR_PASSED_SO_FAR 
+            XOR     a 
+            LD      (REGISTER_SAVE),a 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            LD      hl,0 
+            LD      (RAM_TESTED_AND_PASSED),hl 
+            CALL    RAM_TEST_UPDATE_PROGRESS 
+
+            DI       
+;8 16 32 64 128 256 512
+;1 2  4  8  16  32  64
+;1 2  3  4  5   6   7
+
+
+            LD      a,(SIZE_OF_CART_RAM) 
+            LD      b,a 
+            XOR     a 
+            LD      c,a 
+
+            SCF      
+L_SETUP_LOOP_COUNTER:  
+            RLA      
+            DJNZ    L_SETUP_LOOP_COUNTER 
+            LD      b,a 
+
+L_RAM_TEST_MAIN_LOOP:  
+            LD      a,REGREL+RAM 
+            ADD     a,c 
+            LD      ($C000),a 
+            LD      (REGISTER_SAVE),a 
+            PUSH    bc 
+            CALL    LOW_8K_RAM_TEST 
+            JR      nz,L_RAM_TEST_FAILED 
+            CALL    RAM_TEST_UPDATE_PROGRESS 
+            POP     bc 
+            DEC     b 
+            JR      z,L_RAM_TEST_PASSED 
+
+            LD      a,RAM 
+            ADD     a,c 
+            LD      ($E000),a 
+            LD      (REGISTER_SAVE),a 
+            PUSH    bc 
+            CALL    HIGH_8K_RAM_TEST 
+            JR      nz,L_RAM_TEST_FAILED 
+            CALL    RAM_TEST_UPDATE_PROGRESS 
+            POP     bc 
+            DEC     b 
+            JR      z,L_RAM_TEST_PASSED 
+            INC     c 
+            LD      a,$20 
+            CP      c 
+            JR      nz,L_RAM_TEST_MAIN_LOOP 
+            JR      L_RAM_TEST_PASSED 
+
+L_RAM_TEST_PASSED:   
+            XOR     a 
+            LD      ($E000),a 
+            LD      ($C000),a 
+            LD      de,STR_RAM_TEST_OK 
+            LD      bc,STR_RAM_TEST_OK_END-STR_RAM_TEST_OK 
+            XOR     a 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+            JR      L_RAM_TEST_FINISHED 
+
+L_RAM_TEST_FAILED:   
+            POP     bc 
+            XOR     a 
+            LD      ($E000),a 
+            LD      ($C000),a 
+            LD      de,STR_RAM_TEST_NOK 
+            LD      bc,STR_RAM_TEST_NOK_END-STR_RAM_TEST_NOK 
+            XOR     a 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+L_RAM_TEST_FINISHED:  
+            CALL    PRINT_PRESS_SPACE 
+            CALL    WAIT_FOR_SPACE 
+
+            CALL    F_CLOSE_DIALOG_BOX 
+            RET      
+
+LOW_8K_RAM_TEST:     
+            LD      hl,$C000 
+            JR      RAM_TEST_INIT_FINAL 
+HIGH_8K_RAM_TEST:    
+            LD      hl,$E000 
+RAM_TEST_INIT_FINAL:  
+            LD      bc,$1FFF 
+
+RAM_TEST_LOOP:       
+            XOR     a 
+            LD      (hl),a 
+            CP      (hl) 
+            RET     nz 
+            LD      a,$55 
+            LD      (hl),a 
+            CP      (hl) 
+            RET     nz 
+            LD      a,$AA 
+            LD      (hl),a 
+            CP      (hl) 
+            RET     nz 
+            LD      a,$FF 
+            LD      (hl),a 
+            CP      (hl) 
+            RET     nz 
+            INC     hl 
+            DEC     bc 
+            CP      b 
+            JR      nz,RAM_TEST_LOOP 
+            RET      
+
+RAM_TESTED_AND_PASSED:  
+            DW      0 
+REGISTER_SAVE:       
+            DB      0 
+
+RAM_TEST_UPDATE_PROGRESS:  
+            LD      a,(REGISTER_SAVE) 
+            BIT     7,a 
+            JR      nz,L_PRT_REG_RELOC 
+            XOR     a 
+            LD      (register),a 
+            JR      L_PRINT_RT_PROGRESS 
+L_PRT_REG_RELOC:     
+            XOR     a 
+            LD      (register_reloc),a 
+
+L_PRINT_RT_PROGRESS:  
+            LD      b,RAM_TEST_DIALOG_X+2+STR_PASSED_SO_FAR_END-STR_PASSED_SO_FAR ; x
+            LD      c,RAM_TEST_DIALOG_Y+3 ; y
+            RST     30h 
+            DB      $23 
+            LD      hl,(RAM_TESTED_AND_PASSED) 
+            CALL    F_PRINT_NUMBER_NON_ZERO_LEAD 
+            LD      c,"k" 
+            RST     30h 
+            DB      $21 
+            LD      c,"B" 
+            RST     30h 
+            DB      $21 
+            DI       
+            LD      hl,(RAM_TESTED_AND_PASSED) 
+            LD      bc,0008 
+            ADD     hl,bc 
+            LD      (RAM_TESTED_AND_PASSED),hl 
+
+            LD      a,(REGISTER_SAVE) 
+            LD      (register),a 
+            RET      
+

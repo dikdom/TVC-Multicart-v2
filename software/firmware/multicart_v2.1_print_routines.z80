@@ -1,0 +1,813 @@
+USG_X       EQU     34 
+USG_Y       EQU     13 
+
+F_PRINT_HEADER:      
+            LD      c,1 ; BTEXT set position y
+            LD      b,4 ; set x
+            RST     30h 
+            DB      $23 
+
+            LD      de,str_message ; VID_BKOUT
+            LD      bc,str_message_end-str_message 
+            RST     30h 
+            DB      $22 
+
+            LD      c,SW_MAJOR_VERSION / 16 + "0" 
+            RST     30h 
+            DB      $21 
+            LD      c,"." 
+            RST     30h 
+            DB      $21 
+            LD      c,SW_MAJOR_VERSION # 16 + "0" 
+            RST     30h 
+            DB      $21 
+            LD      c,"." 
+            RST     30h 
+            DB      $21 
+            LD      hl,SW_MINOR_VERSION 
+            CALL    F_PRINT_NUMBER_NON_ZERO_LEAD 
+;            LD      c,SW_MINOR_VERSION # 16 + "0"
+;            RST     30h
+;            DB      $21
+            LD      c,STR_LANG_LETTER 
+            RST     30h 
+            DB      $21 
+
+            LD      c,2 ; BTEXT set position
+            LD      b,64-(str_author_end-str_author)+1 
+            RST     30h 
+            DB      $23 
+
+            LD      de,str_author ; VID_BKOUT
+            LD      bc,str_author_end-str_author 
+            RST     30h 
+            DB      $22 
+
+            LD      C,USG_Y 
+            LD      B,USG_X+1 
+            RST     30h 
+            DB      $23 
+
+            LD      de,STR_USAGE 
+            LD      bc,STR_USAGE_END - STR_USAGE 
+            RST     30h 
+            DB      $22 
+
+            LD      C,USG_Y+2 
+            LD      B,USG_X+2 
+            RST     30h 
+            DB      $23 
+
+            LD      de,STR_UPDN 
+            LD      bc,STR_UPDN_END - STR_UPDN 
+            RST     30h 
+            DB      $22 
+
+            LD      C,USG_Y+3 
+            LD      B,USG_X+2 
+            RST     30h 
+            DB      $23 
+
+            LD      de,STR_PGUPDN 
+            LD      bc,STR_PGUPDN_END - STR_PGUPDN 
+            RST     30h 
+            DB      $22 
+
+            LD      C,USG_Y+4 
+            LD      B,USG_X+2 
+            RST     30h 
+            DB      $23 
+
+            LD      de,STR_TOGGLE_RESET 
+            LD      bc,STR_TOGGLE_RESET_END - STR_TOGGLE_RESET 
+            RST     30h 
+            DB      $22 
+
+            LD      C,USG_Y+5 
+            LD      B,USG_X+2 
+            RST     30h 
+            DB      $23 
+
+            LD      de,STR_START_PROGRAM 
+            LD      bc,STR_START_PROGRAM_END - STR_START_PROGRAM 
+            RST     30h 
+            DB      $22 
+
+            LD      C,USG_Y+6 
+            LD      B,USG_X+2 
+            RST     30h 
+            DB      $23 
+
+            LD      de,STR_DELETE_PROGRAM 
+            LD      bc,STR_DELETE_PROGRAM_END - STR_DELETE_PROGRAM 
+            RST     30h 
+            DB      $22 
+
+            LD      C,USG_Y+7 
+            LD      B,USG_X+2 
+            RST     30h 
+            DB      $23 
+
+            LD      de,STR_RENAME 
+            LD      bc,STR_RENAME_END - STR_RENAME 
+            RST     30h 
+            DB      $22 
+
+            LD      C,USG_Y+8 
+            LD      B,USG_X+2 
+            RST     30h 
+            DB      $23 
+
+            LD      de,STR_SORT_INSTRUCTIONS 
+            LD      bc,STR_SORT_INSTRUCTIONS_END - STR_SORT_INSTRUCTIONS 
+            RST     30h 
+            DB      $22 
+
+            LD      C,USG_Y+9 
+            LD      B,USG_X+2 
+            RST     30h 
+            DB      $23 
+
+            LD      de,STR_SORT_RESET 
+            LD      bc,STR_SORT_RESET_END - STR_SORT_RESET 
+            RST     30h 
+            DB      $22 
+
+            LD      a,(SIZE_OF_CART_RAM) 
+            CP      $00 
+            JR      z,L_PRINT_RESET_HEADER 
+
+            LD      C,USG_Y+10 
+            LD      B,USG_X+2 
+            RST     30h 
+            DB      $23 
+
+            LD      de,STR_TEST_CART_RAM 
+            LD      bc,STR_TEST_CART_RAM_END - STR_TEST_CART_RAM 
+            RST     30h 
+            DB      $22 
+
+L_PRINT_RESET_HEADER:  
+            LD      C,4 
+            LD      B,1 
+            RST     30h 
+            DB      $23 
+
+            LD      de,STR_RESET_CART 
+            LD      bc,STR_RESET_CART_END - STR_RESET_CART 
+            RST     30h 
+            DB      $22 
+
+            CALL    F_PRINT_RESET_STATUS 
+
+            RET      
+
+F_PRINT_RESET_STATUS:  
+            LD      C,4 
+            LD      B,1 + STR_RESET_CART_END-STR_RESET_CART 
+            RST     30h 
+            DB      $23 
+
+            LD      bc,STR_ENABLED_END-STR_ENABLED 
+            LD      a,(RESET_ENABLED) 
+            CP      $00 
+            LD      de,STR_ENABLED 
+            JP      z,PRS_SKIP_DISABLED 
+            LD      de,STR_DISABLED 
+PRS_SKIP_DISABLED:   
+            RST     30h 
+            DB      $22 
+
+            RET      
+F_PRINT_RAM_FOUND:   
+            LD      c,3 ; BTEXT set position
+            LD      b,1 
+            RST     30h 
+            DB      $23 
+
+            LD      de,str_ram_found ; VID_BKOUT
+            LD      bc,str_ram_found_end-str_ram_found 
+            RST     30h 
+            DB      $22 
+
+            LD      hl,ram_sizes_pos 
+            LD      bc,SIZE_OF_CART_RAM 
+            CALL    f_print_from_array 
+
+            RET      
+
+F_PRINT_ROM_SIZE:    
+            LD      c,2 ; BTEXT set position
+            LD      b,1 
+            RST     30h 
+            DB      $23 
+
+            LD      de,STR_FLASH_FOUND ; VID_BKOUT
+            LD      bc,STR_FLASH_FOUND_END-STR_FLASH_FOUND 
+            RST     30h 
+            DB      $22 
+
+            LD      hl,FLASH_SIZES_POS 
+            LD      bc,SIZE_OF_FLASH1 
+            CALL    f_print_from_array 
+
+            LD      c,"," 
+            RST     30h 
+            DB      $21 
+
+            LD      hl,FLASH_SIZES_POS 
+            LD      bc,SIZE_OF_FLASH2 
+            CALL    f_print_from_array 
+
+            RET      
+
+F_PRINT_FREE_SPACE:  
+            LD      C,5 
+            LD      B,1 
+            RST     30h 
+            DB      $23 
+
+            LD      de,STR_FREE_SPACE ; VID_BKOUT
+            LD      bc,STR_FREE_SPACE_END-STR_FREE_SPACE 
+            RST     30h 
+            DB      $22 
+
+            LD      hl,(FREE_BLOCKS_IN_BAMS) 
+            CALL    F_PRINT_NUMBER_NON_ZERO_LEAD 
+
+
+            LD      de,STR_BLOCKS ; VID_BKOUT
+            LD      bc,STR_BLOCKS_END-STR_BLOCKS 
+            RST     30h 
+            DB      $22 
+
+            LD      c,"/" 
+            RST     30h 
+            DB      $21 
+; 
+            LD      hl,(FREE_BLOCKS_IN_BAMS) 
+            LD      de,0002 
+            ADD     hl,de 
+            SRL     h 
+            RR      l 
+            SRL     h 
+            RR      l 
+            CALL    F_PRINT_NUMBER_NON_ZERO_LEAD 
+
+            LD      c," " 
+            RST     30h 
+            DB      $21 
+
+            LD      de,STR_CART_SIZE+2 ; VID_BKOUT
+            LD      bc,2 ; "kB" - always 2 char long
+            RST     30h 
+            DB      $22 
+
+            LD      c," " 
+            RST     30h 
+            DB      $21 
+
+            LD      c," " 
+            RST     30h 
+            DB      $21 
+
+            RET      
+
+F_PRINT_FROM_ARRAY:  ; str length in array is always 5 char long
+; hl - string start pointers
+; bc - index
+            LD      a,(bc) 
+            RLCA     
+            LD      b,$0 
+            LD      c,a 
+            ADD     hl,bc 
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) 
+
+            LD      bc,5 
+            RST     30h 
+            DB      $22 
+
+            RET      
+
+F_PRINT_FRAME:       
+            DI       
+            LD      a,$10 
+            OUT     (2),a 
+            CALL    f_print_frame_top 
+            CALL    f_print_frame_mid 
+            CALL    f_print_frame_btm 
+            LD      a,$30 
+            OUT     (2),a 
+
+            LD      c,Y0+1 ; BTEXT set position
+            LD      b,X0 + 3 
+            RST     30h 
+            DB      $23 
+
+            LD      c,"#" 
+            RST     30h 
+            DB      $21 
+
+            LD      c,Y0+1 ; BTEXT set position
+            LD      b,X0 + 3 + N_NUM + 6 
+            RST     30h 
+            DB      $23 
+
+            LD      de,STR_NAME 
+            LD      bc,STR_NAME_END - STR_NAME 
+            RST     30h 
+            DB      $22 
+
+            LD      c,Y0+1 ; BTEXT set position
+            LD      b,X0 + N_NUM + N_NAME + 4 
+            RST     30h 
+            DB      $23 
+
+            LD      de,STR_TYPE 
+            LD      bc,STR_TYPE_END - STR_TYPE 
+            RST     30h 
+            DB      $22 
+
+            LD      c,Y0+1 ; BTEXT set position
+            LD      b,X0 + N_NUM + N_NAME + N_TYPE + 5 
+            RST     30h 
+            DB      $23 
+
+            LD      de,STR_SIZE 
+            LD      bc,STR_SIZE_END - STR_SIZE 
+            RST     30h 
+            DB      $22 
+
+            RET      
+
+F_PRINT_FRAME_TOP:   
+            LD      hl,$8000 + (Y0*64*10) + 64*5 + X0 
+            CALL    F_PRINT_H_LINE 
+            RET      
+
+F_PRINT_FRAME_MID:   
+            LD      hl,$8000 + (Y0*64*10) + 64*5 + X0 + 64 
+            CALL    F_PRINT_V_LINE 
+
+            LD      hl,$8000 + (Y0*64*10) + 64*5 + X0+N_NUM + 1 + 64 
+            CALL    F_PRINT_V_LINE 
+
+            LD      hl,$8000 + (Y0*64*10) + 64*5 + X0+N_NUM+N_NAME + 2 + 64 
+            CALL    F_PRINT_V_LINE 
+
+            LD      hl,$8000 + (Y0*64*10) + 64*5 + X0+N_NUM+N_NAME+N_TYPE + 3 + 64 
+            CALL    F_PRINT_V_LINE 
+
+            LD      hl,$8000 + (Y0*64*10) + 64*5 + X0+N_NUM+N_NAME+N_TYPE+N_SIZE + 4 + 64 
+            CALL    F_PRINT_V_LINE 
+
+            RET      
+F_PRINT_FRAME_BTM:   
+            LD      hl,$8000 + ((Y0+N_HEIGHT+1)*64*10) + 64*5 + X0 
+            CALL    F_PRINT_H_LINE 
+            RET      
+
+
+
+F_PRINT_H_LINE:      
+            LD      (hl),00001111b 
+            INC     hl 
+            LD      b,n_num+N_name+n_type+N_size+3 
+PRINT_LOOP_P1:       
+            LD      (hl),$ff 
+            INC     hl 
+            DJNZ    print_loop_p1 
+            LD      (hl),11111000b 
+            RET      
+
+F_PRINT_V_LINE:      
+            LD      b,4 
+            LD      de,64 
+PRINT_LOOP_P2:       
+            LD      (hl),00001000b 
+            ADD     hl,de 
+            DJNZ    print_loop_p2 
+
+            LD      c,N_HEIGHT 
+PRINT_LOOP_P3:       
+            LD      b,10 
+PRINT_LOOP_P4:       
+            LD      (hl),00001000b 
+            ADD     hl,de 
+            DJNZ    print_loop_p4 
+            DEC     c 
+            JR      nz,print_loop_p3 
+
+            LD      b,5 
+PRINT_LOOP_P5:       
+            LD      (hl),00001000b 
+            ADD     hl,de 
+            DJNZ    print_loop_p5 
+            RET      
+
+
+F_REWRITE_LIST:      
+            LD      a,(LIST_FIRST_ELEMENT) 
+            LD      l,a 
+            LD      h,0 
+            SLA     l 
+            RL      h 
+            SLA     l 
+            RL      h 
+
+            LD      de,CART_NAME_STRUCT 
+            ADD     hl,de 
+
+RL_DIRECTORY_POS_DONE:  
+            LD      (DIRECTORY_POS),hl 
+            LD      d,0 ; line in the listbox
+            LD      a,(LIST_FIRST_ELEMENT) 
+            LD      e,a ; first line in the listbox
+
+PRINT_LOOP_LINES:    
+            PUSH    de 
+            LD      a,Y0+2 ; let's position to act line, type
+            ADD     a,d 
+            LD      c,a ; position TYPE
+            LD      b,X0+2+N_NUM+N_NAME+2 
+            RST     30h 
+            DB      $23 
+; 
+            LD      hl,(DIRECTORY_POS) 
+            XOR     A 
+            CP      (hl) 
+            JP      z,print_rl_exit 
+            LD      a,TYPE_EXIT_TO_BASIC 
+            CP      (hl) 
+            JR      nz,PRINT_RL_CHECK_CART 
+; PRINT --- (EXIT TO BASIC TYPE AND SIZE)
+            LD      de,STR_TYPE_SIZE_BAS ; VID_BKOUT
+            LD      bc,4 
+            RST     30h 
+            DB      $22 
+            POP     de 
+            PUSH    de 
+            LD      a,y0+2 
+            ADD     a,d 
+            LD      c,a ; position SIZE
+            LD      b,X0+2+N_NUM+N_NAME+N_TYPE+3 
+            RST     30h 
+            DB      $23 
+            LD      de,STR_TYPE_SIZE_BAS ; VID_BKOUT
+            LD      bc,4 
+            RST     30h 
+            DB      $22 
+            JR      PRINT_RL_ROW_NUM 
+
+PRINT_RL_CHECK_CART:  
+            LD      a,TYPE_CART 
+            CP      (hl) 
+            JR      nz,PRINT_RL_CAS 
+            LD      de,STR_TYPE_CART ; VID_BKOUT
+            LD      bc,STR_TYPE_CART_END-STR_TYPE_CART 
+            JR      L_PRINT_ACTUAL_TYPE 
+
+PRINT_RL_CAS:        
+            LD      a,TYPE_CAS 
+            CP      (hl) 
+            JR      nz,PRINT_RL_BIN 
+
+            LD      de,STR_TYPE_CAS ; VID_BKOUT
+            LD      bc,STR_TYPE_CAS_END-STR_TYPE_CAS 
+            JR      L_PRINT_ACTUAL_TYPE 
+
+PRINT_RL_BIN:        
+            LD      a,TYPE_BIN 
+            CP      (hl) 
+            JR      nz,PRINT_RL_DAT 
+
+            LD      de,STR_TYPE_BIN ; VID_BKOUT
+            LD      bc,STR_TYPE_BIN_END-STR_TYPE_BIN 
+            JR      L_PRINT_ACTUAL_TYPE 
+
+PRINT_RL_DAT:        
+            LD      de,STR_TYPE_DAT ; VID_BKOUT
+            LD      bc,STR_TYPE_DAT_END-STR_TYPE_DAT 
+            JR      L_PRINT_ACTUAL_TYPE 
+
+L_PRINT_ACTUAL_TYPE:  
+            RST     30h 
+            DB      $22 
+            POP     de 
+            PUSH    de 
+            LD      a,y0+2 
+            ADD     a,d 
+            LD      c,a ; Set size position
+            LD      b,X0+2+N_NUM+N_NAME+N_TYPE+3 
+            RST     30h 
+            DB      $23 
+
+PRINT_RL_SIZE:       
+            LD      HL,(DIRECTORY_POS) 
+            INC     HL 
+            INC     HL 
+            INC     HL 
+            LD      A,(HL) 
+            LD      l,a 
+            LD      h,0 
+            LD      de,0002 
+            ADD     hl,de 
+            SRL     h 
+            RR      l 
+            SRL     h 
+            RR      l 
+            CALL    f_print_number_2 
+            LD      de,STR_CART_SIZE+2 ; VID_BKOUT
+            LD      bc,2 ; "kB" - always 2 char long
+            RST     30h 
+            DB      $22 
+PRINT_RL_ROW_NUM:    
+            POP     de 
+            PUSH    de 
+            LD      a,y0+2 
+            ADD     a,d 
+            LD      c,a ; setting char to num
+            LD      b,X0+2 
+            RST     30h 
+            DB      $23 
+            POP     de 
+            PUSH    de 
+            LD      a,e 
+            ADD     a,d 
+            LD      l,a 
+            XOR     a 
+            RLA      
+            LD      h,a 
+            CALL    F_print_number_3 
+            POP     de 
+            PUSH    de 
+            LD      a,y0+2 
+            ADD     a,d 
+            LD      c,a ; setting char to name
+            LD      b,X0+2+N_NUM+1 
+            RST     30h 
+            DB      $23 
+
+            LD      HL,(DIRECTORY_POS) 
+; === new type of print
+            INC     hl 
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) 
+            INC     hl 
+            INC     hl 
+            LD      (DIRECTORY_POS),HL 
+            EX      de,hl 
+; === end of change
+
+            LD      bc,4 
+            ADD     hl,bc 
+            LD      bc,16 
+            LD      de,STR_TEMP_AREA 
+            LDIR     
+; old type of print
+;            LD      (DIRECTORY_POS),HL
+; end of old type of print
+
+            LD      de,STR_TEMP_AREA ; VID_BKOUT
+            LD      bc,16 ; image name is always 16 char long
+            RST     30h 
+            DB      $22 
+
+; are we in selected line?
+            POP     de 
+            PUSH    de 
+            LD      a,d 
+            LD      hl,LIST_SELECTED_ELEMENT 
+            CP      (HL) 
+            JR      nz,PRINT_RL_SKIP_HIGHTLIGHT 
+
+; we are in a selected line, lets invert the chars!
+            DI       
+            LD      a,$10 
+            OUT     (2),a 
+            LD      b,d 
+            INC     b 
+            LD      de,640 
+            LD      hl,$8000 + (Y0)*640 + X0 + 1 
+ADD_ONE_LINE:        
+            ADD     hl,de 
+            DJNZ    ADD_ONE_LINE 
+            LD      b,10 
+
+NEXT_LINE:           
+            PUSH    bc 
+            PUSH    hl 
+            LD      de,one_list_lengths 
+            LD      c,4 
+NEXT_WORD:           
+            LD      a,(de) 
+            LD      b,a 
+PRINT_NEGATE:        
+            LD      a,(hl) 
+            CPL      
+            LD      (hl),a 
+            INC     hl 
+            DJNZ    PRINT_NEGATE 
+            INC     hl 
+            INC     de 
+            DEC     c 
+            JR      nz,next_word 
+            POP     hl 
+            LD      bc,64 
+            ADD     hl,bc 
+            POP     bc 
+            DJNZ    next_line 
+
+            LD      a,$30 
+            OUT     (2),a 
+
+PRINT_RL_SKIP_HIGHTLIGHT:  
+            POP     de 
+            INC     d 
+            LD      a,N_HEIGHT 
+            CP      d 
+            JP      nz,PRINT_LOOP_LINES 
+
+            PUSH    de 
+
+PRINT_RL_EXIT:       
+            POP     de 
+            RET      
+
+F_CLEAR_ONE_LINE_IN_BOX:  
+            DI       
+            LD      a,$10 
+            OUT     (2),a 
+
+            CALL    MULTIPLE_C_BY_640 
+
+            PUSH    hl 
+            LD      de,$8000 + (Y0)*640 + X0 + 1 
+            ADD     hl,de 
+            LD      b,N_NUM 
+            CALL    SPACE_STRING 
+
+            POP     hl 
+            PUSH    hl 
+            LD      de,$8000 + (Y0)*640 + N_NUM + X0 + 2 
+            ADD     hl,de 
+            LD      b,N_NAME 
+            CALL    SPACE_STRING 
+
+            POP     hl 
+            PUSH    hl 
+            LD      de,$8000 + (Y0)*640 + N_NUM + N_NAME + X0 + 3 
+            ADD     hl,de 
+            LD      b,N_TYPE 
+            CALL    SPACE_STRING 
+
+            POP     hl 
+            LD      de,$8000 + (Y0)*640 + N_NUM + N_NAME + N_TYPE + X0 + 4 
+            ADD     hl,de 
+            LD      b,N_SIZE 
+            CALL    SPACE_STRING 
+
+            LD      a,$30 
+            OUT     (2),a 
+            RET      
+
+SPACE_STRING:        
+            XOR     a 
+            LD      d,b 
+            LD      c,10 
+            PUSH    hl 
+L_CLEAR_LOOP:        
+            LD      (hl),a 
+            INC     hl 
+            DJNZ    L_CLEAR_LOOP 
+            LD      b,d ; orig counter
+            LD      de,64 
+            POP     hl 
+            ADD     hl,de 
+            PUSH    hl 
+            LD      d,b 
+            DEC     c 
+            JR      nz,L_CLEAR_LOOP 
+            POP     hl 
+            RET      
+
+MULTIPLE_C_BY_640:   ; result is in hl
+            LD      l,c ; mul by 8
+            LD      h,0 
+            SLA     l 
+            RL      h 
+            SLA     l 
+            RL      h 
+            SLA     l 
+            RL      h 
+            EX      de,hl 
+            LD      l,c 
+            LD      h,0 
+            SLA     l ; mul by 2
+            RL      h 
+            ADD     hl,de ; add x8 and x2 = x10
+            LD      b,6 
+L_MUL_64:            
+            SLA     l 
+            RL      h 
+            DJNZ    L_MUL_64 
+            RET      
+
+ONE_LIST_LENGTHS:    
+            DB      N_NUM,N_NAME,N_TYPE,N_SIZE 
+
+;Number in hl to decimal ASCII
+;Thanks to z80 Bits
+;inputs:	hl = number to ASCII
+;example: hl=300 outputs "00300"
+F_PRINT_NUMBER_NON_ZERO_LEAD:  
+            PUSH    hl 
+            SCF      
+            CCF      
+            LD      bc,1000 
+            SBC     HL,BC 
+            POP     HL 
+            JR      nc,F_PRINT_NUMBER_4 
+            PUSH    hl 
+            SCF      
+            CCF      
+            LD      bc,100 
+            SBC     HL,BC 
+            POP     HL 
+            JR      nc,F_PRINT_NUMBER_3 
+            PUSH    hl 
+            SCF      
+            CCF      
+            LD      bc,10 
+            SBC     HL,BC 
+            POP     HL 
+            JR      nc,F_PRINT_NUMBER_2 
+            JR      c,F_PRINT_NUMBER_1 
+
+F_PRINT_NUMBER_4:    
+            LD      bc,$FC18 ; -1000
+            CALL    Num1 
+F_PRINT_NUMBER_3:    
+            LD      bc,-100 
+            CALL    Num1 
+F_PRINT_NUMBER_2:    
+            LD      bc,-10 
+            CALL    Num1 
+F_PRINT_NUMBER_1:    
+            LD      bc,-1 
+NUM1:                
+            LD      a,"0"-1 
+NUM2:                
+            INC     a 
+            ADD     hl,bc 
+            JR      c,Num2 
+            SBC     hl,bc 
+            PUSH    hl 
+            LD      c,a 
+            RST     30h 
+            DB      $21 
+            POP     hl 
+            RET      
+
+F_PRINT_HEX_NUMBER:  ; number in HL
+            PUSH    hl 
+            LD      a,h 
+            RRCA     
+            RRCA     
+            RRCA     
+            RRCA     
+            CALL    L_PRINT_HEX_DIGIT 
+            POP     hl 
+            PUSH    hl 
+            LD      a,h 
+            CALL    L_PRINT_HEX_DIGIT 
+            POP     hl 
+            PUSH    hl 
+            LD      a,l 
+            RRCA     
+            RRCA     
+            RRCA     
+            RRCA     
+            CALL    L_PRINT_HEX_DIGIT 
+            POP     hl 
+            LD      a,l 
+            CALL    L_PRINT_HEX_DIGIT 
+            DI       
+            RET      
+
+L_PRINT_HEX_DIGIT:   
+            AND     $0F 
+            CP      $0A 
+            JR      c,L_HEX_LESS_THAN_TEN 
+            ADD     a,"A"-"0"-10 
+L_HEX_LESS_THAN_TEN:  
+            ADD     a,"0" 
+            LD      c,a 
+            RST     30h 
+            DB      $21 
+            RET      
+
+

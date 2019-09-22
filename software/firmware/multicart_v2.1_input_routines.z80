@@ -1,0 +1,723 @@
+KEY_UP      EQU     1 
+KEY_DN      EQU     2 
+KEY_PG_UP   EQU     3 
+KEY_PG_DN   EQU     4 
+KEY_TGL_RST EQU     5 
+KEY_RETURN  EQU     6 
+KEY_DEL     EQU     7 
+KEY_N       EQU     8 
+KEY_T       EQU     9 
+KEY_S       EQU     10 
+KEY_R       EQU     11 
+KEY_O       EQU     12 
+KEY_M       EQU     13 
+
+
+
+F_HANDLE_INPUT:      
+            CALL    F_KEYBOARD_SCAN 
+            XOR     a 
+            CP      c 
+            JR      nz,KEY_PRESSED 
+            LD      (KEYBOARD_LAST_KEY),a 
+            JR      F_HANDLE_INPUT 
+
+KEY_PRESSED:         
+            LD      hl,KEYBOARD_LAST_KEY 
+            LD      a,(hl) 
+            CP      c 
+            JR      z,INPUT_OLD_KEY 
+            LD      (hl),c 
+            LD      hl,CYCLE_COUNT1 
+            LD      (KEYBOARD_COUNTER),HL 
+            JR      keyboard_process 
+
+INPUT_OLD_KEY:       
+            LD      de,(KEYBOARD_COUNTER) 
+            DEC     de 
+            LD      (KEYBOARD_COUNTER),de 
+            LD      a,d 
+            OR      e 
+            JR      nz,F_HANDLE_INPUT 
+            LD      hl,CYCLE_COUNT2 
+            LD      (KEYBOARD_COUNTER),hl 
+
+KEYBOARD_PROCESS:    
+            LD      a,KEY_UP 
+            CP      c 
+            JP      z,KEYPRESS_KEYUP 
+            LD      a,KEY_DN 
+            CP      c 
+            JP      z,KEYPRESS_KEYDOWN 
+            LD      a,KEY_PG_UP 
+            CP      c 
+            JP      z,KEYPRESS_KEYPGUP 
+            LD      a,KEY_PG_DN 
+            CP      c 
+            JP      z,KEYPRESS_KEYPGDOWN 
+            LD      a,KEY_TGL_RST 
+            CP      c 
+            JP      z,KEYPRESS_SPACE 
+            LD      a,KEY_RETURN 
+            CP      c 
+            JP      z,KEYPRESS_RETURN 
+            LD      a,KEY_DEL 
+            CP      c 
+            JP      z,KEYPRESS_DEL 
+            LD      a,KEY_O 
+            CP      c 
+            JP      z,KEYPRESS_RESET_SORT 
+            LD      a,KEY_N 
+            CP      c 
+            JP      z,KEYPRESS_SORT_NAME 
+            LD      a,KEY_S 
+            CP      c 
+            JP      z,KEYPRESS_SORT_SIZE 
+            LD      a,KEY_T 
+            CP      c 
+            JP      z,KEYPRESS_SORT_TYPE 
+            LD      a,KEY_R 
+            CP      c 
+            JP      z,KEYPRESS_RENAME 
+            LD      a,KEY_M 
+            CP      c 
+            JP      z,KEYPRESS_RAM_TEST 
+
+            JP      KEY_NOT_FOUND 
+
+KEYPRESS_KEYUP:      
+            LD      hl,LIST_SELECTED_ELEMENT 
+            LD      a,(hl) 
+            LD      b,0 
+            CP      b 
+            JR      z,AT_TOP 
+            DEC     (hl) 
+            LD      c,b 
+            RET      
+AT_TOP:              
+            LD      hl,LIST_FIRST_ELEMENT 
+            LD      a,(hl) 
+            LD      b,0 
+            CP      b 
+            JP      z,F_HANDLE_INPUT 
+            DEC     (hl) 
+            LD      c,b 
+            RET      
+
+KEYPRESS_KEYDOWN:    
+            LD      bc,NUM_OF_IMAGES ;keydown
+            LD      a,(bc) 
+            LD      hl,LIST_FIRST_ELEMENT 
+            SUB     (hl) 
+            LD      hl,LIST_SELECTED_ELEMENT 
+            CP      (hl) 
+            JP      z,F_HANDLE_INPUT 
+            LD      a,N_HEIGHT-1 
+            CP      (hl) 
+            JR      z,AT_LAST_LINE 
+            INC     (hl) 
+            RET      
+AT_LAST_LINE:        
+            LD      hl,LIST_FIRST_ELEMENT 
+            INC     (hl) 
+            RET      
+
+KEYPRESS_KEYPGUP:    ; page up
+            LD      hl,LIST_FIRST_ELEMENT 
+            LD      a,(hl) 
+            LD      b,N_HEIGHT 
+            SUB     b 
+            JP      m,PG_UP_TOP_PAGE 
+            LD      (hl),a 
+            RET      
+PG_UP_TOP_PAGE:      
+            LD      a,(hl) 
+            CP      0 
+            JR      z,PG_UP_FIRST_LINE 
+            XOR     a 
+            LD      (hl),a 
+            RET      
+PG_UP_FIRST_LINE:    
+            LD      hl,LIST_SELECTED_ELEMENT 
+            LD      (hl),a ; A is zero because of prev condition
+            RET      
+; 
+KEYPRESS_KEYPGDOWN:  ; Page down
+            LD      bc,LIST_FIRST_ELEMENT 
+            LD      hl,NUM_OF_IMAGES 
+            LD      a,(bc) 
+            ADD     a,N_HEIGHT 
+            ADD     a,N_HEIGHT 
+            LD      d,a 
+            LD      a,(hl) 
+; D contains the possible next page's last position + 1
+; A contains the number of images (last index + 1)
+            SUB     d ; let's check if there is enough elements in directory
+            JP      m,END_REACHED1 
+            LD      a,(bc) ; YES, there is
+            ADD     a,N_HEIGHT 
+            LD      (bc),a 
+            RET      
+END_REACHED1:        
+            LD      a,(bc) 
+            ADD     a,N_HEIGHT 
+            LD      d,a 
+            LD      a,(hl) 
+            SUB     d 
+            JP      m,END_REACHED2 
+
+            LD      d,a 
+            LD      a,(bc) 
+            ADD     a,d 
+            ADD     a,$01 
+            LD      (bc),a 
+            RET      
+END_REACHED2:        
+            LD      a,(bc) 
+            LD      d,a 
+            LD      a,(hl) 
+            SUB     d 
+            LD      bc,LIST_SELECTED_ELEMENT 
+            LD      (bc),a 
+            RET      
+
+KEYPRESS_SPACE:      ; SPACE - toggle reset enabled
+            LD      hl,RESET_ENABLED 
+            LD      b,(hl) 
+            LD      a,2 
+            SUB     b 
+            LD      (hl),a 
+            RET      
+
+KEYPRESS_RETURN:     ; RETURN - boot selected item (EXIT to Basic, CART or CAS)
+            EI       
+            LD      bc,$0200 ; at least one IT to scan keyboard
+L_DELAY_LOOP:        
+            DEC     bc ; 6
+            NOP      ; 4
+            LD      a,$00 ; 7
+            CP      b ; 4
+            JR      nz,L_DELAY_LOOP ; 12   SUM = 33
+
+            RST     30h 
+            DB      $93 
+            XOR     a 
+            CP      c 
+            JR      z,L_KEYBOARD_READ 
+            RST     30h 
+            DB      $91 
+L_KEYBOARD_READ:     
+            DI       
+
+            XOR     a 
+            LD      (WARM_FLAG),a ; force cold reset
+
+            LD      de,LIST_FIRST_ELEMENT 
+            LD      a,(de) 
+            LD      hl,LIST_SELECTED_ELEMENT 
+            ADD     a,(hl) 
+            LD      d,0 
+            SLA     a 
+            RL      d 
+            SLA     a 
+            RL      d 
+
+            LD      h,d 
+            LD      l,a 
+            LD      bc,CART_NAME_STRUCT 
+            ADD     hl,bc 
+            LD      a,TYPE_DAT 
+            CP      (hl) 
+            JP      z,F_HANDLE_INPUT 
+            LD      SP,$16AC 
+            PUSH    hl 
+; 
+; video mode set to 4 colors, 32 columns
+            LD      c,1 
+            RST     30h 
+            DB      $04 
+            DI       
+            POP     hl 
+
+            LD      a,TYPE_EXIT_TO_BASIC 
+            CP      (hl) 
+            JP      nz,CHECK_CART_EXEC 
+L_EXIT_TO_BASIC:     
+; Exit to BASIC
+            LD      bc,JUMP_TO_BASIC_FROM_U1_END - JUMP_TO_BASIC_FROM_U1 
+            LD      hl,JUMP_TO_BASIC_FROM_U1 
+            LD      de,EXT0_BASE_END 
+            LDIR     
+
+            XOR     a ; let's make TVC think it was a COLD reset
+            LD      ($0B21),a 
+
+            JP      EXT0_BASE_END 
+EBE         EQU     EXT0_BASE_END 
+
+JUMP_TO_BASIC_FROM_U1:  
+            .PHASE  ebe 
+            LD      a,$70 
+            OUT     (2),a 
+            LD      (3),a 
+            LD      hl,$C332 
+            LD      a,(hl) 
+            CP      $C2 
+            JR      z,TVC22 
+TVC12:               
+            LD      hl,$1700 
+            PUSH    hl 
+            POP     ix 
+            XOR     a 
+            LD      bc,$02ef 
+L_TVC12_FILL_STACK_LOOP:  
+            LD      (hl),a 
+            CPI      
+            JP      pe,L_TVC12_FILL_STACK_LOOP 
+            LD      ($1720),hl 
+            LD      ($1722),hl 
+            LD      hl,$FB5B 
+            LD      de,$0008 
+            LD      bc,$0027 
+            LDIR     
+            LD      a,$30 
+            OUT     (2),a 
+            CALL    CONFIGURE_EXT0 
+            LD      a,$70 
+            OUT     (2),a 
+
+            LD      hl,$DA19 
+            PUSH    hl ; (continue from DA19)
+            EI       
+            JP      $DE10 
+
+TVC22:               
+            LD      hl,BASIC_FLAG 
+            LD      a,(hl) 
+            EX      af,af' 
+            LD      (hl),$00 
+            LD      hl,$16AC 
+            LD      c,$01 
+L_TVC22_LOOP_OUT:    
+            LD      b,$09 
+            LD      a,c 
+L_TVC22_LOOP_IN:     
+            LD      (hl),a 
+            ADD     a,c 
+            DAA      
+            INC     hl 
+            DJNZ    L_TVC22_LOOP_IN 
+            INC     c 
+            CP      $90 
+            JR      nz,L_TVC22_LOOP_OUT 
+            LD      hl,$1700 
+            PUSH    hl 
+            POP     ix 
+; Skip warm reset test, continue with cold reset
+            LD      bc,$02ef 
+            XOR     a 
+L_TVC22_FILL_STACK_LOOP:  
+            LD      (hl),a 
+            CPI      
+            JP      pe,L_TVC22_FILL_STACK_LOOP 
+            LD      ($1720),hl 
+            LD      ($1722),hl 
+            EX      af,af' 
+            BIT     2,a 
+            JR      nz,L_SKIP_NEW 
+            LD      (hl),a ; NEW (A is 0)
+L_SKIP_NEW:          
+            EX      af,af' 
+            CALL    $d289 
+            LD      hl,$f7B4 
+            LD      de,$0008 
+            LD      bc,$0027 
+            LDIR     
+            LD      a,$30 
+            OUT     (2),a 
+            CALL    CONFIGURE_EXT0 
+            LD      a,$70 
+            OUT     (2),a 
+            EI       
+
+            JP      $CF0C 
+
+            .DEPHASE  
+JUMP_TO_BASIC_FROM_U1_END:  
+
+CHECK_CART_EXEC:     
+            LD      a,TYPE_CART 
+            CP      (hl) 
+            JR      nz,EXEC_CAS 
+
+; Executing the selected Cartridge
+            INC     hl 
+
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) 
+            EX      de,hl 
+            INC     hl 
+            PUSH    hl 
+            LD      bc,JUMP_TO_CART_FROM_U1_END - JUMP_TO_CART_FROM_U1 
+            LD      hl,JUMP_TO_CART_FROM_U1 
+            LD      de,$4000 
+            LDIR     
+            JP      $4000 
+
+JUMP_TO_CART_FROM_U1:  
+            LD      HL,REGISTER 
+            LD      a,(RESET_ENABLED) 
+            LD      c,a 
+            LD      b,0 
+            ADD     hl,bc 
+            POP     bc 
+            LD      a,(bc) 
+            LD      (hl),a 
+            LD      a,$20 
+            OUT     (2),a 
+            JP      $C004 
+JUMP_TO_CART_FROM_U1_END:  
+
+EXEC_CAS:            
+            LD      a,(hl) 
+            CP      TYPE_BIN 
+            JR      z,LOAD_BIN 
+            INC     hl 
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) 
+            EX      de,hl 
+            PUSH    hl ; HL: position of CAS in struct array
+            CALL    F_COPY_BASIC_INIT 
+            CALL    F_BASIC_INIT 
+            POP     hl 
+            CALL    F_COPY_CAS_FROM_CART_INU0 
+
+; Set BASIC area
+            LD      hl,BASIC_PROGRAM_START 
+            LD      (1720h),hl 
+            LD      (1722h),hl 
+            LD      a,(BASIC_VERSION) 
+            CP      2 
+            CALL    nz,CONFIGURE_EXT0 ; needed for v1.2
+            JP      nz,MEMORY_PAGING ; in multicart_v2.1_BASIC.z80
+            LD      a,0Fh ; no NEW but RUN during reset
+            LD      (BASIC_FLAG),a 
+
+            JP      L_EXIT_TO_BASIC 
+; Set memory map to: SYS, U1, U2, CART
+            LD      a,20h 
+            OUT     (2),a 
+            JP      BASIC_ENTRY 
+
+LOAD_BIN:            
+            INC     hl 
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) 
+            EX      de,hl 
+            PUSH    hl ; HL: position of CAS in struct array
+            CALL    F_COPY_BASIC_INIT 
+            CALL    F_BASIC_INIT 
+            POP     hl 
+            CALL    F_COPY_BIN_FROM_CART_INU0 
+
+            JP      L_EXIT_TO_BASIC 
+
+
+
+; DEL pressed
+; let"s wait until it"s release
+KEYPRESS_DEL:        
+
+            LD      a,(LIST_FIRST_ELEMENT) 
+            LD      b,a 
+            LD      a,(LIST_SELECTED_ELEMENT) 
+            ADD     a,b 
+            CP      $00 
+            JP      z,F_HANDLE_INPUT ; BASIC selected
+
+            LD      bc,15*256+9 ; x;y => 15;9
+            LD      de,34*256+8 ; w;h => 34;6
+            CALL    f_show_dialog_box 
+
+            CALL    f_print_delete_question 
+            DI       
+
+L_ANSWER_SCAN_LOOP:  
+            CALL    get_answer 
+            CP      $00 
+            JR      z,L_ANSWER_SCAN_LOOP 
+
+            PUSH    af 
+
+L_ANSWER_SCAN_RELEASE:  
+            CALL    get_answer 
+            CP      $00 
+
+            JR      nz,L_ANSWER_SCAN_RELEASE 
+
+            POP     af 
+
+            CP      1 
+            JR      nz,L_TO_DELETE 
+            CALL    f_close_dialog_box 
+            JP      F_HANDLE_INPUT 
+
+L_TO_DELETE:         
+
+            CALL    F_CLEAR_BOX 
+
+            CALL    F_DELETE_SELECTED_FROM_FLASH 
+
+            LD      de,STR_FLASH_PRESS_SPACE 
+            LD      bc,STR_FLASH_PRESS_SPACE_END-STR_FLASH_PRESS_SPACE 
+            LD      a,1 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            CALL    WAIT_FOR_SPACE 
+
+            CALL    f_close_dialog_box 
+
+            CALL    F_CALC_FREE_SPACE 
+            CALL    F_PRINT_FREE_SPACE 
+
+            LD      a,(LIST_FIRST_ELEMENT) 
+            LD      c,a 
+            LD      a,(NUM_OF_IMAGES) 
+            INC     a 
+            SUB     c 
+
+            CP      N_HEIGHT 
+            JR      nc,DELETE_DONE 
+
+            LD      c,a 
+            INC     c 
+            CALL    F_CLEAR_ONE_LINE_IN_BOX 
+
+L_SKIP_DELETE:       
+DELETE_DONE:         
+            RET      
+
+KEYPRESS_SORT_SIZE:  
+            LD      b,SORT_TYPE_SIZE 
+            JP      F_SORT 
+KEYPRESS_SORT_TYPE:  
+            LD      b,SORT_TYPE_TYPE 
+            JP      F_SORT 
+KEYPRESS_SORT_NAME:  
+            LD      b,SORT_TYPE_NAME 
+            JP      F_SORT 
+KEYPRESS_RESET_SORT:  
+            XOR     a 
+            LD      (PREVIOUS_SORT_TYPE),a 
+            LD      (CURRENT_SORT_TYPE),a 
+            JP      F_INIT_ENTRIES 
+
+KEYPRESS_RENAME:     
+            LD      a,(LIST_FIRST_ELEMENT) 
+            LD      b,a 
+            LD      a,(LIST_SELECTED_ELEMENT) 
+            ADD     a,b 
+            CP      $00 
+            JP      z,F_HANDLE_INPUT ; BASIC selected, cancel rename
+
+            CALL    F_RENAME_FILE 
+
+            OR      a 
+            JP      z,F_HANDLE_INPUT 
+
+RENAME_DONE:         
+            RET      
+KEYPRESS_RAM_TEST:   
+            LD      a,(SIZE_OF_CART_RAM) 
+            CP      $00 
+            JP      z,F_HANDLE_INPUT 
+            CALL    F_CART_RAM_TEST 
+            RET      
+
+KEY_NOT_FOUND:       
+            LD      bc,0 
+TEST_LOOP2:          
+            DJNZ    TEST_LOOP2 
+            LD      a,c 
+            OUT     (0),a 
+            DEC     c 
+            JR      nz,test_loop2 
+            JP      F_HANDLE_INPUT 
+
+F_KEYBOARD_SCAN:     
+            DI       
+            LD      c,0 
+
+            LD      a,2 ; check T
+            OUT     (3),a 
+            IN      a,($58) 
+            BIT     0,a 
+            JR      nz,CHECK_R 
+            LD      c,KEY_T 
+            RET      
+CHECK_R:             
+            BIT     7,a 
+            JR      nz,CHECK_O 
+            LD      c,KEY_R 
+            RET      
+CHECK_O:             
+            LD      a,3 
+            OUT     (3),a 
+            IN      a,($58) 
+            BIT     2,a 
+            JR      nz,CHECK_S 
+            LD      c,KEY_O 
+            RET      
+
+CHECK_S:             
+            LD      a,4 
+            OUT     (3),a 
+            IN      a,($58) 
+            BIT     2,a 
+            JR      nz,CHECK_A 
+            LD      c,KEY_S 
+            RET      
+CHECK_A:             
+            BIT     6,a 
+            JR      nz,CheckE_acute 
+; up pressed
+            LD      c,KEY_UP 
+            RET      
+CHECKE_ACUTE:        
+; Check E' - Page Up
+            LD      a,5 
+            OUT     (3),a 
+            IN      a,($58) 
+            BIT     6,a 
+            JR      nz,CHECK_DEL 
+            LD      c,KEY_PG_UP 
+            RET      
+CHECK_DEL:           
+            BIT     0,a 
+            JR      nz,CHECK_RETURN 
+            LD      c,KEY_DEL 
+            RET      
+CHECK_RETURN:        
+            BIT     4,a 
+            JR      nz,CHECK_Y 
+            LD      c,KEY_RETURN 
+            RET      
+CHECK_Y:             
+            LD      a,6 ; check Y - DOWN
+            OUT     (3),a 
+            IN      a,($58) 
+            BIT     6,a 
+            JR      nz,CHECK_N 
+            LD      c,KEY_DN 
+            RET      
+CHECK_N:             
+            BIT     4,a 
+            JR      nz,CHECK_COLON 
+            LD      c,KEY_N 
+            RET      
+CHECK_COLON:         
+            LD      a,7 
+            OUT     (3),a 
+            IN      a,($58) 
+            BIT     2,a 
+            JR      nz,CHECK_SPACE 
+            LD      c,KEY_PG_DN 
+            RET      
+CHECK_SPACE:         
+            BIT     5,a 
+            JR      nz,CHECK_M 
+            LD      c,KEY_TGL_RST 
+            RET      
+CHECK_M:             
+            BIT     7,a 
+            JR      nz,JOY_UP 
+            LD      c,KEY_M 
+            RET      
+JOY_UP:              
+            LD      a,8 
+            OUT     (3),a 
+            IN      a,($58) 
+            BIT     1,a 
+            JR      nz,JOY_DOWN 
+            LD      c,KEY_UP 
+            RET      
+JOY_DOWN:            
+            BIT     2,a 
+            JR      nz,JOY_RIGHT 
+            LD      c,KEY_DN 
+            RET      
+JOY_RIGHT:           
+            BIT     5,a 
+            JR      nz,JOY_LEFT 
+            LD      c,KEY_PG_DN 
+            RET      
+JOY_LEFT:            
+            BIT     6,a 
+            JR      nz,DONE_KEYSCAN 
+            LD      c,KEY_PG_UP 
+
+DONE_KEYSCAN:        
+            RET      
+
+GET_ANSWER:          
+            LD      b,0 
+            LD      d,10 
+L_SCAN_LOOP:         
+            CALL    scan_answer_keys 
+            LD      a,c 
+            CP      b 
+            JR      z,L_same_key_pressed 
+            LD      b,a 
+            LD      d,3 
+            JR      L_SCAN_LOOP 
+L_SAME_KEY_PRESSED:  
+            DEC     d 
+            JR      nz,L_SCAN_LOOP 
+            RET      
+
+SCAN_ANSWER_KEYS:    
+            LD      c,0 
+            LD      a,6 ; checking for "N"
+            OUT     (3),a 
+            IN      a,($58) 
+            BIT     4,a 
+            JR      z,L_SCAN_DONE_N 
+            BIT     6,a ; checking for "Y"
+            JR      z,L_SCAN_DONE_Y 
+            LD      a,7 ; checking for "ESC"
+            OUT     (3),a 
+            IN      a,($58) 
+            BIT     3,a 
+            JR      z,L_SCAN_DONE_N 
+            BIT     5,a 
+            JR      z,L_SCAN_DONE_SPC 
+            RET      
+L_SCAN_DONE_Y:       
+            LD      c,2 
+            RET      
+L_SCAN_DONE_N:       
+            LD      c,1 
+            RET      
+L_SCAN_DONE_SPC:     
+            LD      c,3 
+            RET      
+
+WAIT_FOR_SPACE:      
+L_SPACE_SCAN_LOOP:   
+            CALL    get_answer 
+            CP      $00 
+            JR      z,L_SPACE_SCAN_LOOP 
+            CP      $03 
+            JR      nz,L_SPACE_SCAN_LOOP 
+L_SPACE_SCAN_RELEASE:  
+            CALL    get_answer 
+            CP      $00 
+            JR      nz,L_SPACE_SCAN_RELEASE 
+            RET      
+
+
+
+

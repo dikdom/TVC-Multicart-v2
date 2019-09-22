@@ -1,0 +1,153 @@
+EXIT_TO_BASIC EQU   " SALIR a BASIC  " 
+STR_LANG_LETTER EQU "s" 
+
+
+STR_MESSAGE:         
+            DB      "Aplicacion para el MultiCart de Videoton TVC v" 
+STR_MESSAGE_END:     
+STR_RAM_FOUND:       
+            DB      "RAM encontrado: " 
+STR_RAM_FOUND_END:   
+STR_FLASH_FOUND:     
+            DB      "Flash encontrado: " 
+STR_FLASH_FOUND_END:  
+STR_FREE_SPACE:      
+            DB      "Espacio libre: " 
+STR_FREE_SPACE_END:  
+STR_BLOCKS:          
+            DB      " bloques" 
+STR_BLOCKS_END:      
+
+STR_FLASH_SIZES:     
+            DB      "nada " 
+            DB      "128kB" 
+            DB      "256kB" 
+            DB      "512kB" 
+FLASH_SIZES_POS:     
+            DW      STR_FLASH_SIZES,STR_FLASH_SIZES+5,STR_FLASH_SIZES+10,STR_FLASH_SIZES,STR_FLASH_SIZES+15 
+STR_RAM_SIZES:       
+            DB      " nada" 
+            DB      "  8kB" 
+            DB      " " 
+STR_CART_SIZE:       
+            DB      "16kB" 
+            DB      " 32kB" 
+            DB      " 64kB" 
+            DB      "128kB" 
+            DB      "256kB" 
+            DB      "512kB" 
+RAM_SIZES_POS:       
+;                   nincs        ,8kB            ,16kB            ,32kB            ,64kB            ,128kB           ,256kB           ,512kB
+            DW      STR_RAM_SIZES,STR_RAM_SIZES+5,STR_RAM_SIZES+10,STR_RAM_SIZES+15,STR_RAM_SIZES+20,STR_RAM_SIZES+25,STR_RAM_SIZES+30,STR_RAM_SIZES+35 
+STR_NAME:            
+            DB      "Nombre" 
+STR_NAME_END:        
+STR_SIZE:            
+            DB      "Tam." 
+STR_SIZE_END:        
+STR_TYPE:            
+            DB      "Tipo" 
+STR_TYPE_END:        
+STR_USAGE:           
+            DB      "Teclas:" 
+STR_USAGE_END:       
+STR_UPDN:            
+            DB      "Subir(A)/Bajar(Y) o joystick" 
+STR_UPDN_END:        
+STR_PGUPDN:          
+            DB      "Re Pag/Av Pag " 
+            DB      129 
+            DB      "/: o joy I/D" 
+STR_PGUPDN_END:      
+STR_TOGGLE_RESET:    
+            DB      "Cambiar funcion de reset: Spc" 
+STR_TOGGLE_RESET_END:  
+STR_START_PROGRAM:   
+            DB      "Seleccionar imagen: Intro" 
+STR_START_PROGRAM_END:  
+STR_DELETE_PROGRAM:  
+            DB      "Eliminar la imagen: Del" 
+STR_DELETE_PROGRAM_END:  
+STR_SORT_INSTRUCTIONS:  
+            DB      "Ordenar (N)om,(T)ipo,tam(S)" 
+STR_SORT_INSTRUCTIONS_END:  
+STR_SORT_RESET:      
+            DB      "Deshacer (O)rdenacion" 
+STR_SORT_RESET_END:  
+STR_RENAME:          
+            DB      "(R)enombrar archivo seleccio." 
+STR_RENAME_END:      
+STR_RESET_CART:      
+            DB      "Reiniciar MultiCart al resetear TVC: " 
+STR_RESET_CART_END:  
+STR_ENABLED:         
+            DB      "SI" 
+STR_ENABLED_END:     
+STR_DISABLED:        
+            DB      "NO " 
+STR_DISABLED_END:    
+STR_RAM_TEST:        
+            DB      "RAMTEST" 
+STR_RAM_TEST_END:    
+TEST_CONTENT:        
+            DB      "Comprobando, FLASH GRABADA!" 
+TEST_CONTENT_END:    
+
+STR_DELETE_QUESTION:  
+            DB      "Quieres borrar el archivo:" 
+STR_DELETE_QUESTION_END:  
+STR_DELETE_ANSWER:   
+            DB      "Y/N" 
+STR_DELETE_ANSWER_END:  
+STR_FOUND_FLASH_CHIP:  
+            DB      "Flash encontrado: " 
+STR_FOUND_FLASH_CHIP_END:  
+STR_FLASH_IC_UNKNOWN:  
+            DB      "desconocido" 
+STR_FLASH_IC_UNKNOWN_END:  
+STR_FLASH_CREATE_WORK_COPY:  
+            DB      "Generando copia de trabajo..." 
+STR_FLASH_CREATE_WORK_COPY_END:  
+STR_FLASH_MODIFY_FS:  
+            DB      "Eliminando archivo..." 
+STR_FLASH_MODIFY_FS_END:  
+STR_FLASH_UPDATE:    
+            DB      "Escribiendo en la flash..." 
+STR_FLASH_UPDATE_END:  
+STR_FLASH_DONE:      
+            DB      "Hecho" 
+STR_FLASH_DONE_END:  
+STR_FLASH_NOT_SUPPORTED:  
+            DB      "No se puede borrar archivo" 
+STR_FLASH_NOT_SUPPORTED_END:  
+STR_FLASH_PRESS_SPACE:  
+            DB      "ESPACIO para continuar!" 
+STR_FLASH_PRESS_SPACE_END:  
+
+STR_FLASH_RENAME_NOT_SUPPORTED:  
+            DB      "No se puede renombrar archivo" 
+STR_FLASH_RENAME_NOT_SUPPORTED_END:  
+
+STR_RENAME_Q_NEW_NAME:  
+            DB      "Nuevo nombre:" 
+STR_RENAME_Q_NEW_NAME_END:  
+STR_RENAME_Q_INSTRUCTION:  
+            DB      "  (max 16 cars, ESC: cancel)" 
+STR_RENAME_Q_INSTRUCTION_END:  
+STR_TEST_CART_RAM:   
+            DB      "Comprobar RAM: M" 
+STR_TEST_CART_RAM_END:  
+STR_PASSED_SO_FAR:   
+            DB      "OK: " 
+STR_PASSED_SO_FAR_END:  
+
+STR_TESTING_RAM:     
+            DB      "Comprobando RAM del MultiCart" 
+STR_TESTING_RAM_END:  
+STR_RAM_TEST_OK:     
+            DB      "RAM del MultiCart OK !" 
+STR_RAM_TEST_OK_END:  
+STR_RAM_TEST_NOK:    
+            DB      "Error en la RAM del MULTICART !!!" 
+STR_RAM_TEST_NOK_END:  
+ 

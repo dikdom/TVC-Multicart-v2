@@ -1,0 +1,42 @@
+F_BASIC_INIT:        ; Set memory map to: U0, U1, U2, SYS
+
+            LD      a,70h 
+            LD      (3),a 
+            OUT     (2),a 
+            LD      a,(0da0ch) 
+            CP      5bh 
+            JR      nz,BASIC_INIT_END 
+            LD      (BASIC_VERSION),a 
+            LD      hl,1700h 
+            PUSH    hl 
+            POP     ix 
+            LD      bc,02efh 
+            LD      de,1701h 
+            LD      (hl),0 
+            LDIR     
+            LD      hl,0fb5bh 
+            LD      de,8 
+            LD      bc,27h 
+            LDIR     
+            CALL    0de10h 
+
+BASIC_INIT_END:      ; Set memory map to: U0, U1, U2, CART
+            LD      a,30h 
+            LD      (3),a 
+            OUT     (2),a 
+            RET      
+
+BASIC_VERSION:       
+            DB      2 
+
+
+MEMORY_PAGING:       
+            LD      a,70h 
+            LD      (3),a 
+            OUT     (2),a 
+            EI       
+            LD      a,(0de1bh) 
+            CP      2ah 
+            JP      z,0DE1Bh ; RUN in BASIC 1.2
+            JP      0d6edh ; RUN in BASIC 2.x
+

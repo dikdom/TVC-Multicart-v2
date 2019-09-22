@@ -1,0 +1,335 @@
+SORT_TYPE_NAME EQU  1 
+SORT_TYPE_SIZE EQU  2 
+SORT_TYPE_TYPE EQU  3 
+
+INITIAL_SORT_TYPES:  
+            DB      1,2,1,1 
+
+TYPE_ORDER:          
+            DB      2,3,1 ; CART:CAS:BIN
+
+PREVIOUS_SORT_TYPE:  
+            DB      00 
+CURRENT_SORT_TYPE:   
+            DB      00 
+
+COMPARE_BY_SIZE:     ; de - hl  -> de < hl:C, de>=hl:c
+            PUSH    de 
+            POP     ix 
+            PUSH    hl 
+            POP     iy 
+            LD      a,(ix+3) 
+            CP      (iy+3) 
+            RET      
+
+COMPARE_BY_TYPE:     
+            PUSH    de
+            PUSH    hl 
+
+            LD      a,(hl) ; type of high record
+            EX      de,hl 
+            LD      b,(hl) ; type of low record
+
+            LD      hl,TYPE_ORDER-1 
+L_TYPE_LOOP_A:       
+            DEC     a 
+            INC     hl 
+            JR      nz,L_TYPE_LOOP_A 
+            LD      a,(hl) 
+
+            LD      c,a ; order of high type
+            LD      hl,TYPE_ORDER-1 
+L_TYPE_LOOP_B:       
+            DEC     hl 
+            DJNZ    L_TYPE_LOOP_B 
+            LD      a,(hl) ; order of low type
+
+            CP      c 
+
+            POP     hl 
+            POP     de 
+            RET      
+
+COMPARE_BY_NAME:     
+            PUSH    bc 
+            PUSH    hl 
+            PUSH    de 
+
+            CALL    GET_STRING_POINTER 
+            POP     de 
+            PUSH    de 
+            PUSH    hl 
+            EX      de,hl 
+            CALL    GET_STRING_POINTER 
+
+            EX      de,hl 
+            POP     hl 
+            LD      b,16 
+
+L_STR_COMPARE_LOOP:  
+            LD      a,(hl) 
+            CALL    convert_a 
+            CALL    modify_char_code 
+            LD      c,a 
+            LD      a,(de) 
+            CALL    convert_a 
+            CALL    modify_char_code 
+
+            CP      c 
+            JR      nz,L_STR_COMPARE_DONE 
+            INC     hl 
+            INC     de 
+            DEC     b 
+            JR      nz,L_STR_COMPARE_LOOP 
+
+L_STR_COMPARE_DONE:  
+            POP     de 
+            POP     hl 
+            POP     bc 
+            RET      
+
+MODIFY_CHAR_CODE:    
+            CP      $61 
+            RET     c 
+            CP      $99 
+            RET     nc 
+
+            PUSH    hl 
+            PUSH    bc 
+            LD      hl,STR_ABC_ORDER 
+            LD      b,STR_ABC_ORDER_END-STR_ABC_ORDER 
+L_SEARCH_CHAR_LOOP:  
+            LD      c,(hl) 
+            INC     hl 
+            CP      c 
+            JR      z,L_FOUND 
+            DJNZ    L_SEARCH_CHAR_LOOP 
+            CP      $80 
+            JR      nc,L_MODIFY_CHAR_END 
+            ADD     a,$09 
+            JR      L_MODIFY_CHAR_END 
+L_FOUND:             
+            LD      a,$61 + STR_ABC_ORDER_END-STR_ABC_ORDER 
+            SUB     b 
+
+L_MODIFY_CHAR_END:   
+            POP     bc 
+            POP     hl 
+            RET      
+
+GET_STRING_POINTER:  
+            INC     hl 
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) 
+            EX      de,hl 
+            LD      de,0004 
+            ADD     hl,de 
+            RET      
+
+CONVERT_A:           
+            CP      $41 
+            JR      c,L_NOT_CAPITAL_ASCII 
+            CP      $5b 
+            JR      nc,L_NOT_CAPITAL_ASCII 
+            ADD     a,$20 ; capital, normal letter
+            RET      
+L_NOT_CAPITAL_ASCII:  
+            CP      $80 
+            JR      c,L_NOT_CAPITAL_ACUTE 
+            CP      $89 
+            JR      nc,L_NOT_CAPITAL_ACUTE 
+            ADD     a,$10 
+L_NOT_CAPITAL_ACUTE:  
+            RET      
+
+SORT:                
+            LD      hl,CART_NAME_STRUCT 
+            LD      de,0008 
+            ADD     hl,de 
+
+L_BUBBLE_BIG_LOOP:   
+            LD      d,h 
+            LD      e,l 
+L_BUBBLE_SMALL_LOOP:  
+            DEC     de 
+            DEC     de 
+            DEC     de 
+            DEC     de 
+
+            LD      a,d 
+            CP      >CART_NAME_STRUCT 
+            JR      nz,L_COMPARE_THEM 
+            LD      a,e 
+            CP      <CART_NAME_STRUCT 
+            JR      z,L_END_ONE_BUBBLE 
+
+L_COMPARE_THEM:      
+            LD      a,(CURRENT_SORT_TYPE) 
+            CALL    SET_COMPARE_BITS 
+            JR      nz,L_CHECK_C_BIT 
+            LD      a,(PREVIOUS_SORT_TYPE) 
+            CALL    SET_COMPARE_BITS 
+            JR      z,L_END_ONE_BUBBLE 
+L_CHECK_C_BIT:       
+            JR      nc,L_BUBBLE_SMALL_LOOP ; de^ bigger than hl^
+
+L_END_ONE_BUBBLE:    
+            INC     de 
+            INC     de 
+            INC     de 
+            INC     de 
+            LD      a,d 
+            CP      h 
+            JR      nz,L_INDEED_MOVE_THE_BLOCK 
+            LD      a,e 
+            CP      l 
+            JR      z,L_TRANSFER_DONE ; de and hl are the same. No need to transfer anything
+
+L_INDEED_MOVE_THE_BLOCK:  
+            PUSH    de 
+            PUSH    hl 
+            LD      bc,4 
+            LD      de,STR_TEMP_AREA 
+            LDIR     
+            POP     hl 
+            POP     de 
+
+            PUSH    hl 
+            PUSH    de 
+            OR      a 
+            SBC     hl,de 
+            PUSH    hl 
+            POP     bc 
+
+            POP     de 
+            POP     hl 
+
+            PUSH    hl 
+            PUSH    de 
+            LD      d,h 
+            LD      e,l 
+            INC     de 
+            INC     de 
+            INC     de 
+            DEC     hl 
+            LDDR     
+
+            POP     de 
+            POP     hl 
+            PUSH    hl 
+            PUSH    de 
+
+            LD      hl,STR_TEMP_AREA 
+            LD      bc,4 
+            LDIR     
+            POP     de 
+            POP     hl 
+
+
+L_TRANSFER_DONE:     
+            INC     hl 
+            INC     hl 
+            INC     hl 
+            INC     hl 
+            LD      a,(hl) 
+            CP      0 
+            JR      nz,L_BUBBLE_BIG_LOOP 
+
+            RET      
+; input:
+;  a - compare type
+SET_COMPARE_BITS:    
+            CP      SORT_TYPE_NAME 
+            JR      nz,L_SCB_SKIP1 
+            CALL    COMPARE_BY_NAME 
+            RET      
+L_SCB_SKIP1:         
+            CP      SORT_TYPE_SIZE 
+            JR      nz,L_SCB_SKIP2 
+            CALL    COMPARE_BY_SIZE 
+            RET      
+L_SCB_SKIP2:         
+            CALL    COMPARE_BY_TYPE 
+            RET      
+
+
+; input:
+;  b - type of sorting
+F_SORT:              
+            LD      a,(NUM_OF_IMAGES) 
+            CP      2 
+            JR      c,L_SORT_DONE 
+
+            LD      a,(CURRENT_SORT_TYPE) 
+            CP      0 
+            JR      nz,L_FSBT_CONT 
+            LD      hl,INITIAL_SORT_TYPES 
+            LD      e,b 
+            LD      d,0 
+            ADD     hl,de 
+            LD      a,(hl) 
+L_FSBT_CONT:         
+            LD      (PREVIOUS_SORT_TYPE),a 
+            LD      a,b 
+            LD      (CURRENT_SORT_TYPE),a 
+
+            LD      hl,PREVIOUS_SORT_TYPE 
+            CP      (hl) 
+            JR      z,INVERT_LIST 
+
+            JP      SORT 
+
+L_SORT_DONE:         
+            RET      
+
+INVERT_LIST:         
+            XOR     a 
+            LD      h,a 
+            LD      a,(NUM_OF_IMAGES) 
+            SLA     a 
+            RL      h 
+            SLA     a 
+            RL      h 
+            LD      de,CART_NAME_STRUCT 
+            LD      l,a 
+            ADD     hl,de 
+            PUSH    hl 
+            LD      hl,CART_NAME_STRUCT 
+            LD      de,0004 
+            ADD     hl,de 
+            POP     de 
+
+            LD      a,(NUM_OF_IMAGES) 
+            SRL     a 
+L_INVERT_LOOP:       
+            PUSH    af 
+            LD      b,4 
+
+L_INVERT_LDIR_LOOP:  
+            LD      a,(de) 
+            LD      c,(hl) 
+            LD      (hl),a 
+            LD      a,c 
+            LD      (de),a 
+            INC     hl 
+            INC     de 
+            DJNZ    L_INVERT_LDIR_LOOP 
+
+            POP     af 
+            DEC     a 
+            JR      z,L_INVERT_DONE 
+
+L_INVERT_DE_LOOP:    
+            DEC     de ; 48
+            DEC     de 
+            DEC     de 
+            DEC     de 
+            DEC     de 
+            DEC     de 
+            DEC     de 
+            DEC     de 
+            JR      L_INVERT_LOOP 
+
+L_INVERT_DONE:       
+            RET      

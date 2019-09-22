@@ -1,0 +1,69 @@
+            .ENT    TEST_GET_DIRS 
+            .ENT    TEST_COPY_NO_FILE 
+            .ENT    TEST_COPY_FILE 
+            .ent    TEST_LOAD_BIN_FILE
+
+            .ORG    $1000 
+TEST_DIR_STRUCT:     
+            DS      22 
+
+TEST_GET_DIRS:       
+            LD      de,TEST_DIR_STRUCT 
+            CALL    GET_FIRST_DIRECTORY_ENTRY 
+            CALL    GET_NEXT_DIRECTORY_ENTRY 
+            CALL    GET_NEXT_DIRECTORY_ENTRY 
+            CALL    GET_NEXT_DIRECTORY_ENTRY 
+            CALL    GET_NEXT_DIRECTORY_ENTRY 
+            CALL    GET_NEXT_DIRECTORY_ENTRY 
+TEST_DIR_LOOP:       
+            JR      test_DIR_loop 
+
+TEST_NO_FILE_STRUCT:  
+            DW      $2000 
+            DW      $1000 
+            DB      $02 
+            DB      "no file present" 
+            DB      0 
+TEST_COPY_NO_FILE:   
+            LD      de,TEST_NO_FILE_STRUCT 
+            CALL    LOAD_FILE_TO_TVCRAM 
+TEST_LOAD_NO_FILE_LOOP:  
+            JR      test_Load_no_file_loop 
+
+TEST_COPY_FILE_STRUCT:  
+            DW      $2000 
+            DW      $F000 
+            DB      $03 
+            DB      "rladar" 
+            DB      0 
+TEST_COPY_FILE:      
+            LD      de,TEST_COPY_FILE_STRUCT 
+            CALL    LOAD_FILE_TO_TVCRAM 
+TEST_LOAD_FILE_LOOP:  
+            JR      test_Load_file_loop
+
+
+TEST_LOAD_BIN_FILE_STRUCT:  
+            DW      $2000 
+            DW      $0000 
+            DB      $04 
+            DB      "zoli" 
+            DB      0 
+TEST_LOAD_BIN_FILE:      
+            LD      de,TEST_LOAD_BIN_FILE_STRUCT
+            CALL    LOAD_FILE_TO_TVCRAM 
+TEST_LOAD_BIN_FILE_LOOP:  
+            JR      TEST_LOAD_BIN_FILE_LOOP
+            
+
+            .ORG    $FA00 
+; <last block>, <size of block>, <BASIC program: 10 PRINT 5>
+            DB      $01,$3B,$07,$0A,$00,$DD,$20,$35,$FF,$00 
+
+            .ORG    $FB00 
+; <last block>, <size of block>, <BASIC program: 10 PRINT 5>
+            DB      $FF,$08,$07,$0A,$00,$DD,$20,$35,$FF,$00
+            
+            .ORG    $FC00 
+; <last block>, <size of block>, <BASIC program: 10 PRINT 5>
+            DB      $FF,$0A,$EF,$19,$07,$0A,$00,$DD,$20,$35,$FF,$00 

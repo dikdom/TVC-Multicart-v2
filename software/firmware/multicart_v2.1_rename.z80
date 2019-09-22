@@ -1,0 +1,297 @@
+INPUT_BUF_LEN EQU   $08A0 
+INPUT_BUFFER EQU    $08A1 
+
+
+F_RENAME_FILE:       
+            LD      bc,15*256+9 ; x;y => 15;9
+            LD      de,34*256+8 ; w;h => 34;6
+            CALL    f_show_dialog_box 
+
+            LD      a,(FLASH1_TYPE) 
+            CP      $01 
+            JR      nz,L_check_sst 
+            JR      RENAME_AMD 
+L_CHECK_SST:         
+            CP      $02 
+            JR      nz,L_check_atmel 
+            JR      RENAME_SST 
+L_CHECK_ATMEL:       
+            CP      $03 
+            JR      nz,RENAME_UNKOWN 
+            JR      RENAME_ATMEL 
+
+RENAME_AMD:          
+            CALL    PRINT_FOUND_FLASH_IC 
+
+            LD      de,STR_FLASH_IC_AMD 
+            LD      bc,STR_FLASH_IC_AMD_END-STR_FLASH_IC_AMD 
+            LD      a,2 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            JR      FINISH_RENAME_NOT_SUPPORTED 
+
+
+RENAME_ATMEL:        
+            CALL    PRINT_FOUND_FLASH_IC 
+
+            LD      de,STR_FLASH_IC_ATMEL 
+            LD      bc,STR_FLASH_IC_ATMEL_END-STR_FLASH_IC_ATMEL 
+            LD      a,2 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            JR      FINISH_RENAME_NOT_SUPPORTED 
+
+
+RENAME_UNKOWN:       
+            CALL    PRINT_FOUND_FLASH_IC 
+
+            LD      de,STR_FLASH_IC_UNKNOWN 
+            LD      bc,STR_FLASH_IC_UNKNOWN_END-STR_FLASH_IC_UNKNOWN 
+            LD      a,2 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            JR      FINISH_RENAME_NOT_SUPPORTED 
+
+
+FINISH_RENAME_NOT_SUPPORTED:  
+            CALL    PRINT_NOT_SUPPORTED 
+            CALL    PRINT_PRESS_SPACE 
+            CALL    WAIT_FOR_SPACE 
+            CALL    F_CLOSE_DIALOG_BOX 
+            XOR     a 
+            RET      
+
+PRINT_FOUND_FLASH_IC:  
+            LD      de,STR_FOUND_FLASH_CHIP 
+            LD      bc,STR_FOUND_FLASH_CHIP_END-STR_FOUND_FLASH_CHIP 
+            XOR     a 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+            RET      
+
+PRINT_NOT_SUPPORTED:  
+            LD      de,STR_FLASH_RENAME_NOT_SUPPORTED 
+            LD      bc,STR_FLASH_RENAME_NOT_SUPPORTED_END-STR_FLASH_RENAME_NOT_SUPPORTED 
+            XOR     a 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+            RET      
+
+RENAME_SST:          
+            CALL    PRINT_FOUND_FLASH_IC 
+
+            LD      de,STR_FLASH_IC_SST 
+            LD      bc,STR_FLASH_IC_SST_END-STR_FLASH_IC_SST 
+            LD      a,2 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            LD      de,STR_RENAME_Q_NEW_NAME 
+            LD      bc,STR_RENAME_Q_NEW_NAME_END-STR_RENAME_Q_NEW_NAME 
+            XOR     a 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+            LD      de,STR_RENAME_Q_INSTRUCTION 
+            LD      bc,STR_RENAME_Q_INSTRUCTION_END-STR_RENAME_Q_INSTRUCTION 
+            LD      a,1 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+            CALL    setup_input_field 
+            CALL    INPUT_STR 
+            OR      A 
+            JR      nz,L_EXECUTE_SST_RENAME 
+; cancelled rename
+
+            CALL    F_CLOSE_DIALOG_BOX 
+            XOR     a 
+            RET      
+
+L_EXECUTE_SST_RENAME:  
+            CALL    COPY_SST_BAM_DIR 
+            CALL    setup_string_pointers 
+            LD      de,BAM_START ; HL contains the TVC mem pointer of image name
+            OR      a ; clear C
+            SBC     hl,de 
+            EX      de,hl 
+            LD      hl,(BAM_START_SST) 
+            ADD     hl,de 
+            LD      de,INPUT_BUFFER 
+            EX      de,hl 
+            LDIR     
+
+            CALL    WRITE_BACK_BAM_SST 
+
+            CALL    print_PRESS_SPACE 
+            CALL    WAIT_FOR_SPACE 
+            CALL    F_CLOSE_DIALOG_BOX 
+            LD      a,1 
+            RET      
+
+SETUP_STRING_POINTERS:  
+            LD      a,(LIST_FIRST_ELEMENT) 
+            LD      b,a 
+            LD      a,(LIST_SELECTED_ELEMENT) 
+            ADD     a,b 
+            LD      de,0 
+            SLA     a 
+            RL      d 
+            SLA     a 
+            RL      d 
+            LD      e,a 
+            LD      hl,CART_NAME_STRUCT 
+            ADD     hl,de 
+            INC     hl 
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) 
+            LD      hl,4 
+            ADD     hl,de 
+            LD      bc,$10 
+            LD      de,INPUT_BUFFER 
+            RET      
+
+SETUP_INPUT_FIELD:   
+            CALL    setup_string_pointers 
+            LDIR     
+
+            LD      a,$20 ; let's find the last non-space
+            LD      bc,$0f 
+            LD      hl,INPUT_BUFFER 
+            ADD     hl,bc 
+            INC     c 
+L_STR_END_SEARCH_LOOP:  
+            CP      (hl) 
+            JR      nz,L_STR_END_SEARCH_LOOP_DONE 
+            DEC     hl 
+            DEC     c 
+            JR      nz,L_STR_END_SEARCH_LOOP 
+
+L_STR_END_SEARCH_LOOP_DONE:  
+            LD      a,c 
+            LD      (INPUT_BUF_LEN),a 
+
+            LD      de,INPUT_BUFFER 
+            XOR     a 
+            CALL    F_PRINT_ONE_LINE_IN_DIALOG 
+
+            LD      c,$7F 
+            RST     $30 
+            DB      $21 
+
+            RET      
+
+INPUT_STR:           
+
+            EI       
+L_CHECK_TVC_INPUT_BUFFER:  
+            RST     30h 
+            DB      $93 
+            XOR     a 
+            CP      c 
+            JR      z,L_INPUT_STR_LOOP 
+            RST     30h 
+            DB      $91 
+            JR      L_CHECK_TVC_INPUT_BUFFER 
+
+L_INPUT_STR_LOOP:    
+            RST     30h 
+            DB      $91 
+
+            LD      a,$0d 
+            CP      c 
+            JR      z,L_INPUT_STR_EXIT 
+            LD      a,$08 
+            CP      c 
+            JR      z,L_INPUT_STR_DEL 
+            LD      a,$1B 
+            CP      c 
+            JR      z,L_INPUT_STR_ESC 
+
+            LD      a,$1F ; check non-printable characters (crsr move, etc..)
+            CP      c 
+            JR      nc,L_INPUT_STR_LOOP 
+            LD      a,$A0 
+            CP      c 
+            JR      c,L_INPUT_STR_LOOP 
+
+            LD      a,(INPUT_BUF_LEN) 
+            CP      $10 
+            JR      z,L_INPUT_STR_LOOP 
+
+            LD      a,(INPUT_BUF_LEN) 
+            LD      hl,INPUT_BUFFER 
+            LD      e,a 
+            LD      d,0 
+            ADD     hl,de 
+            LD      (hl),c 
+
+
+            PUSH    bc 
+            LD      c,$13 
+            RST     30h 
+            DB      $21 
+            POP     bc 
+            RST     30h 
+            DB      $21 
+            LD      c,$7f 
+            RST     30h 
+            DB      $21 
+
+            LD      hl,INPUT_BUF_LEN 
+            INC     (hl) 
+            JR      L_INPUT_STR_LOOP 
+
+L_INPUT_STR_EXIT:    
+            LD      c,$13 
+            RST     30h 
+            DB      $21 
+            LD      c,$20 
+            RST     30h 
+            DB      $21 
+            DI       
+
+            LD      a,(INPUT_BUF_LEN) 
+            CP      $10 
+            RET     z 
+            LD      hl,INPUT_BUFFER 
+            LD      e,a 
+            LD      d,0 
+            ADD     hl,de 
+            LD      d,$20 
+L_STR_BUFFER_FILL_SPACE_LOOP:  
+            LD      (hl),d 
+            INC     a 
+            INC     hl 
+            CP      $10 
+            JR      nz,L_STR_BUFFER_FILL_SPACE_LOOP 
+
+            RET      
+
+L_INPUT_STR_ESC:     
+            LD      c,$13 
+            RST     30h 
+            DB      $21 
+            LD      c,$20 
+            RST     30h 
+            DB      $21 
+            XOR     a 
+            DI       
+            RET      
+
+L_INPUT_STR_DEL:     
+            LD      a,(INPUT_BUF_LEN) 
+            OR      a 
+            JR      z,L_INPUT_STR_LOOP 
+            LD      c,$13 
+            RST     30h 
+            DB      $21 
+            LD      c,$20 
+            RST     30h 
+            DB      $21 
+            LD      c,$13 
+            RST     30h 
+            DB      $21 
+            LD      c,$13 
+            RST     30h 
+            DB      $21 
+            LD      c,$7F 
+            RST     30h 
+            DB      $21 
+            LD      hl,INPUT_BUF_LEN 
+            DEC     (hl) 
+            JP      L_INPUT_STR_LOOP 

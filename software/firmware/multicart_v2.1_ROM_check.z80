@@ -1,0 +1,244 @@
+ROM_CHECK_START:     
+F_CHECK_ROM_IDS:     
+            LD      E,0 
+            CALL    F_READ_ID 
+            LD      a,b 
+            LD      (FLASH1_MAN),a 
+            LD      a,c 
+            LD      (FLASH1_CHIP),a 
+            CALL    get_size_of_chip 
+            LD      (SIZE_OF_FLASH1),a 
+            LD      a,(MANUFACTURER_CHECK_CNT) 
+            LD      (FLASH1_TYPE),a 
+
+            LD      E,A19 
+            CALL    F_READ_ID 
+            LD      a,b 
+            LD      (FLASH2_MAN),a 
+            LD      a,c 
+            LD      (FLASH2_CHIP),a 
+            CALL    get_size_of_chip 
+            LD      (SIZE_OF_FLASH2),a 
+            LD      a,(MANUFACTURER_CHECK_CNT) 
+            LD      (FLASH2_TYPE),a 
+
+            RET      
+; Size DATA
+; 01h - AMD, BFh - SST; 1Fh - Atmel
+; 20H - AM29F010
+; A4H - AM29F040
+; B5H - SST39SF010A
+; B6H - SST39SF020A
+; B7H - SST39SF040
+; D5H - AT29C010
+; DAH - AT29C020
+; A4H - AT29C040
+
+; type data
+; 0 - not found
+; 1 - AMD
+; 2 - SST
+; 3 - Atmel
+CHIP_DATA_BLOCK:     
+; list of 8 bytes or $FF (end of list)
+; byte1: manufacturer
+; byte2: dummy
+; byte3-4, byte 5-6, byte7-8:
+;   chip id-chip size: 1(128),2(256),4(512)
+; AMD
+            DB      $01,$00,$20,$01,$A4,$04,$00,$00 
+; SST
+            DB      $BF,$00,$B5,$01,$B6,$02,$B7,$04 
+; ATmel
+            DB      $1F,$00,$D5,$01,$DA,$02,$A4,$04 
+            DB      $FF 
+MANUFACTURER_CHECK_CNT:  
+            DB      00 
+
+GET_SIZE_OF_CHIP:    
+            XOR     a 
+            LD      (MANUFACTURER_CHECK_CNT),a 
+            LD      hl,CHIP_DATA_BLOCK 
+CHIP_SIZE_LOOP:      
+            LD      a,(hl) 
+            CP      $FF 
+            JR      z,CHIP_ID_NOT_FOUND 
+            PUSH    hl 
+            LD      hl,MANUFACTURER_CHECK_CNT 
+            INC     (hl) 
+            POP     hl 
+            CP      b 
+            JR      nz,NEXT_MANUFACTURER 
+            LD      b,3 ; at most 3 checks possible
+CHIP_ID_LOOP:        
+            INC     hl 
+            INC     hl 
+            LD      a,(hl) 
+            CP      c 
+            JR      z,CHIP_FOUND 
+            DJNZ    CHIP_ID_LOOP 
+            JR      CHIP_ID_NOT_FOUND 
+CHIP_FOUND:          
+            INC     HL 
+            LD      a,(hl) 
+            RET      
+
+NEXT_MANUFACTURER:   
+            LD      de,$08 
+            ADD     hl,de 
+            JR      CHIP_SIZE_LOOP 
+CHIP_ID_NOT_FOUND:   
+            XOR     A 
+            LD      (MANUFACTURER_CHECK_CNT),a 
+            RET      
+
+
+F_READ_ID:           
+            LD      a,$F0 
+            LD      ($C0FF),A 
+;5555 AA
+;2AAA 55
+;5555 90
+; reg E=0 : ROM0
+; reg E=A19 : ROM1
+
+            LD      hl,$5555 
+            LD      d,$aa 
+            CALL    f_set_pages 
+
+            LD      hl,$2AAA 
+            LD      d,$55 
+            CALL    f_set_pages 
+
+            LD      hl,$5555 
+            LD      d,$90 
+            CALL    f_set_pages 
+
+            LD      a,e 
+            LD      (register_disable_reset),A ; A18-A1 shall be 0, A19 set
+
+            LD      A,($C000) ; Manufacturer ID
+            LD      b,a 
+
+            LD      A,($C001) ; Chip ID
+            LD      c,a 
+
+; close the autoselect sequence
+            LD      a,$F0 
+            LD      ($C0FF),A 
+
+            XOR     A 
+            LD      (register),A 
+
+            RET      
+
+F_SET_PAGES:         ; HL-flash address, D-flash data, E-0 or A19
+            LD      A,H 
+            SRL     A 
+            SRL     A 
+            SRL     A 
+            SRL     A 
+            SRL     A 
+            SRL     A 
+            OR      E 
+            LD      (register_disable_reset),a 
+
+            LD      a,$C0 
+            OR      h 
+            LD      h,a 
+            LD      (hl),d 
+            RET      
+
+
+;ROM check routines
+
+
+F_CALC_FREE_SPACE:   
+            LD      hl,(BAM_START_ADDRESS) 
+            LD      a,(SIZE_OF_FLASH1) 
+            CALL    F_CFS_CHECK_BAMS 
+            PUSH    bc 
+            LD      hl,(BAM_START_ADDRESS) 
+            LD      de,$0100 
+            ADD     hl,de 
+            LD      a,(SIZE_OF_FLASH2) 
+            CALL    F_CFS_CHECK_BAMS 
+            POP     hl 
+            ADD     hl,bc 
+            LD      (FREE_BLOCKS_IN_BAMS),hl 
+            RET      
+
+F_CFS_CHECK_BAMS:    
+            CP      4 
+            JR      nz,CFS_CHECK_256 
+            LD      c,$FF 
+            JR      CFS_CHECK_DONE 
+CFS_CHECK_256:       
+            CP      2 
+            JR      nz,CFS_CHECK_128 
+            LD      c,$7F 
+            JR      CFS_CHECK_DONE 
+CFS_CHECK_128:       
+            CP      1 
+            JR      nz,CFS_NOT_INSTALLED 
+            LD      c,$3F 
+            JR      CFS_CHECK_DONE 
+CFS_NOT_INSTALLED:   
+            RET      
+CFS_CHECK_DONE:      
+            XOR     a 
+            LD      b,a 
+            ADD     hl,bc 
+            LD      c,a 
+            CALL    F_CHECK_ONE_BAM_BANK 
+            RET      
+
+F_CHECK_ONE_BAM_BANK:  
+            DEC     a 
+CFS_LOOP:            
+            BIT     0,(hl) 
+            JR      nz,CFS_BIT_1 
+            INC     bc 
+CFS_BIT_1:           
+            BIT     1,(hl) 
+            JR      nz,CFS_BIT_2 
+            INC     bc 
+CFS_BIT_2:           
+            BIT     2,(hl) 
+            JR      nz,CFS_BIT_3 
+            INC     bc 
+CFS_BIT_3:           
+            BIT     3,(hl) 
+            JR      nz,CFS_BIT_4 
+            INC     bc 
+CFS_BIT_4:           
+            BIT     4,(hl) 
+            JR      nz,CFS_BIT_5 
+            INC     bc 
+CFS_BIT_5:           
+            BIT     5,(hl) 
+            JR      nz,CFS_BIT_6 
+            INC     bc 
+CFS_BIT_6:           
+            BIT     6,(hl) 
+            JR      nz,CFS_BIT_7 
+            INC     bc 
+CFS_BIT_7:           
+            BIT     7,(hl) 
+            JR      nz,CFS_BIT_8 
+            INC     bc 
+CFS_BIT_8:           
+            DEC     HL 
+            CP      l 
+            JR      nz,CFS_LOOP 
+            RET      
+
+ROM_CHECK_END:       
+
+
+
+
+
+
+
+

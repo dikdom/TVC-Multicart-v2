@@ -1,0 +1,50 @@
+STR_EXT0_MENU1_SELECTED:  
+            .CSTR   "Saving BASIC program. " 
+
+STR_EXT0_MENU2_SELECTED:  
+            .CSTR   "Saving executable memory area. " 
+
+
+STR_EXT0_FILENAME_Q:  
+            .CSTR   "Enter file name!\r\n> " 
+STR_EXT0_Q1:         
+            DB      "What do you want to do?\r\n" 
+            DB      "1) Save BASIC program (CAS)\r\n" 
+            DB      "2) Save executable memory area with target destination incl. (BIN)\r\n" 
+            DB      "3) Save memory area (DAT)\r\n" 
+            .CSTR   "> " 
+STR_EXT0_INTERRUPTED:  
+            .CSTR   "ESC pressed, bye!\r\n" 
+STR_EXT0_NOT_EXPECTED:  
+            .CSTR   "Not expected, bye!\r\n" 
+STR_EXT0_CRLF:       
+            .CSTR   "\r\n" 
+STR_EXT0_IC_AMD:     
+            .CSTR   "AM29F0x0" 
+STR_EXT0_IC_SST:     
+            .CSTR   "SST39SF0x0" 
+STR_EXT0_IC_ATMEL:   
+            .CSTR   "AT29C0x0" 
+STR_EXT0_IC_UNKNOWN:  
+            .CSTR   "Unknown IC" 
+STR_EXT0_SUPPORTED:  
+            .CSTR   " found, checking free space...\r\n" 
+STR_EXT0_NOT_SUPPORTED:  
+            .CSTR   " found, not supported. Bye!\r\n" 
+STR_EXT0_NOT_ENOUGH_SPACE:  
+            .CSTR   "Not enough free space, bye!\r\n" 
+STR_EXT0_ZERO_COPY:  
+            .CSTR   "Zero length file is not saved. Bye!\r\n" 
+STR_EXT0_FEATURE_NOT_SUPPORTED:  
+            .CSTR   "This feature is not supported yet. Bye!\r\n" 
+STR_EXT0_NOT_ENOUGH_RAM_TO_SAVE:  
+            .CSTR   "Not enough free RAM for this operation. Bye!\r\n" 
+STR_EXT0_USING_CART_RAM:  
+            .CSTR   "Using CART's RAM.\r\n" 
+STR_EXT0_USING_TVC_RAM:  
+            .CSTR   "Using TVC RAM starting at $" 
+STR_EXT0_SIZE_TO_SAVE:  
+            .CSTR   "Size to save: $" 
+STR_EXT0_BYTES:      
+            .CSTR   " bytes\r\n" 
+

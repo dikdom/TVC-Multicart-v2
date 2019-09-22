@@ -1,0 +1,1197 @@
+CONFIGURE_EXT0:      
+            LD      hl,EXT0_BOOT_ROUTINE 
+            LD      de,EXT0_BASE 
+            LD      ($0021),de 
+            LD      bc,EXT0_BOOT_ROUTINE_END-EXT0_BOOT_ROUTINE 
+            LDIR     
+            RET      
+
+
+EXT0_BOOT_ROUTINE:   
+            .PHASE  EXT0_BASE 
+            DI       
+            LD      a,$30 
+            OUT     (2),A 
+            LD      a,(0003) 
+            PUSH    af 
+            LD      a,$30 
+            LD      (3),A 
+
+            XOR     a 
+            LD      (register),a 
+
+            CALL    EXT0_ROUTINE 
+
+            LD      hl,STR_EXT0_CRLF 
+            CALL    PRINT_CSTRING 
+
+            POP     af 
+            LD      (3),A 
+            OUT     (2),a 
+            EI       
+            RET      
+
+PROGRAM_SIZE_TO_SAVE:  
+            DW      0 
+BAM_IN_TVC_RAM:      
+            DW      0 
+MAPPED_IN_SECTOR:    
+            DB      0 
+PREV_BANK_BLOCK:     
+            DW      0 
+CURRENT_BAM_ADDRESS:  
+            DW      0 
+PROGRAM_POS:         
+            DW      0
+
+EXT0_TEMP_STR:       
+            DS      16 
+
+EXT0_BASE_END:       
+            .DEPHASE  
+EXT0_BOOT_ROUTINE_END:  
+
+
+EXT0_ROUTINE:
+;            call EXT0_INIT_CHIP_VARIABLES
+            LD      hl,STR_EXT0_Q1 
+            CALL    PRINT_CSTRING 
+            CALL    SELECT_MENU 
+            RET      
+
+EXT0_INIT_CHIP_VARIABLES:
+            ld bc,$0200
+            ld hl,$3000
+            ld de,$0900
+            ldir ; backup ram on $3000
+            
+            ld hl, CODE_IN_CART ; ROM check start!
+            ld de,$3000
+            ld bc, ROM_CHECK_END-ROM_CHECK_END
+            ldir
+            
+            call F_CHECK_ROM_IDS ; calculate IDs
+            call F_CALC_FREE_SPACE ; calculate free space
+            
+            
+            ld bc,$0200
+            ld de,$3000
+            ld hl,$0900
+            ldir ; restore ram on $3000
+            ret
+
+SELECT_MENU:         
+            CALL    EXT0_INPUT_STRING 
+            LD      a,1 
+            CP      c 
+            JR      nz,NOT_EXPECTED 
+            LD      hl,EXT0_TEMP_STR 
+            LD      a,(hl) 
+            CP      '1' 
+            JR      z,MENU_1_SELECTED 
+            CP      '2' 
+            JP      z,MENU_2_SELECTED
+            CP      '3' 
+            JP      z,MENU_3_SELECTED
+            CP      $FF 
+            JR      z,L_SELECT_MENU_INTERRUPTED 
+NOT_EXPECTED:        
+            LD      hl,STR_EXT0_NOT_EXPECTED 
+            CALL    PRINT_CSTRING 
+            JR      L_SELECT_MENU_EXIT 
+L_SELECT_MENU_INTERRUPTED:  
+            LD      hl,STR_EXT0_INTERRUPTED 
+            CALL    PRINT_CSTRING 
+L_SELECT_MENU_EXIT:  
+            RET      
+
+INPUT_FILE_NAME:
+            LD      a,$20 
+            LD      (EXT0_TEMP_STR),a 
+            LD      bc,$0F 
+            LD      de,EXT0_TEMP_STR+1 
+            LD      hl,EXT0_TEMP_STR 
+            LDIR     
+
+            CALL    EXT0_INPUT_STRING 
+            ret
+
+MENU_1_SELECTED:
+            LD      hl,STR_EXT0_MENU1_SELECTED 
+            CALL    PRINT_CSTRING 
+            
+            LD      hl,STR_EXT0_FILENAME_Q 
+            CALL    PRINT_CSTRING 
+
+            CALL    INPUT_FILE_NAME 
+            LD      a,0 
+            CP      c 
+            JR      z,NOT_EXPECTED 
+            LD      a,$ff 
+            CP      c 
+            JR      z,MENU_INTERRUPTED 
+            CALL    SAVE_BASIC_PROGRAM 
+            RET      
+
+MENU_INTERRUPTED:  
+            LD      hl,STR_EXT0_INTERRUPTED 
+            CALL    PRINT_CSTRING 
+            RET      
+
+MENU_2_SELECTED_SKIP:
+            
+            call CHECK_IC_SAVE_BINARY_PROGRAM
+            ret z
+            
+            LD      hl,STR_EXT0_MENU2_SELECTED 
+            CALL    PRINT_CSTRING 
+            
+            LD      hl,STR_EXT0_FILENAME_Q 
+            CALL    PRINT_CSTRING 
+
+            CALL    INPUT_FILE_NAME 
+            LD      a,0 
+            CP      c 
+            JR      z,NOT_EXPECTED 
+            LD      a,$ff 
+            CP      c 
+            JR      z,MENU_INTERRUPTED
+            
+            ld hl,EXT0_TEMP_STR
+            ld de,$0700
+            ld bc,$0010
+            ldir
+            
+            xor a 
+            LD      (EXT0_TEMP_STR),a 
+            LD      bc,$0F 
+            LD      de,EXT0_TEMP_STR+1 
+            LD      hl,EXT0_TEMP_STR 
+            LDIR
+            
+            ld hl,STR_EXT0_ENTER_START_ADDR
+            CALL    PRINT_CSTRING
+
+            CALL    EXT0_INPUT_STRING
+            ld a,c
+            cp $ff
+            jp z,NOT_EXPECTED
+            cp $00
+            jp z,NOT_EXPECTED
+            call EXT0_CONVERT_STR_TO_INT
+            jp z,NOT_EXPECTED
+            ld (PROGRAM_POS),hl
+
+            ld hl,STR_EXT0_ENTER_LAST_ADDR
+            CALL    PRINT_CSTRING
+
+            CALL    EXT0_INPUT_STRING
+            ld a,c
+            cp $ff
+            jp z,NOT_EXPECTED
+            cp $00
+            jp z,NOT_EXPECTED
+            
+            call EXT0_CONVERT_STR_TO_INT
+            jp z,NOT_EXPECTED
+            ex de,hl
+            ld hl,(PROGRAM_POS)
+            ex de,hl
+            or a
+            sbc hl,de
+            inc hl
+            ld (PROGRAM_SIZE_TO_SAVE),hl
+            
+            ld hl,$0700
+            ld de,EXT0_TEMP_STR
+            ld bc,$0010
+            ldir
+
+            CALL    SAVE_BASIC_PROGRAM 
+            RET
+
+EXT0_CONVERT_STR_TO_INT:
+            ld a,c
+            ld bc,EXT0_TEMP_STR
+            add a,c
+            ld c,a
+            xor a
+            ld (bc),a
+            ld hl,0
+            ld bc,EXT0_TEMP_STR
+L_CONVERT_STR2INT_LOOP:
+            ld a,(bc)
+            cp 0
+            jr z,L_CONVERT_DONE
+            cp '0'
+            jr c,L_CONVERT_FAILED
+            cp '9'
+            jr nc,L_CONVERT_FAILED
+            sub '0'
+            
+            ld d,h
+            ld e,l
+            
+            sla e ; mul de by 2
+            rl d
+            
+            sla l ; mul hl by 8
+            rl h
+            sla l
+            rl h
+            sla l
+            rl h
+
+            add hl,de ; hl -> hl x 10
+            jr c,L_CONVERT_FAILED
+            
+            add a,l
+            ld l,a
+            ld a,h
+            adc a,0
+            jr c,L_CONVERT_FAILED
+            ld h,a
+            inc bc
+            jr L_CONVERT_STR2INT_LOOP
+            
+L_CONVERT_FAILED:
+    xor a ; Z is set
+    ret
+L_CONVERT_DONE:
+    xor a ; Z is reset
+    inc a
+    ret
+MENU_2_SELECTED:    
+MENU_3_SELECTED:
+            LD      hl,STR_EXT0_FEATURE_NOT_SUPPORTED 
+            CALL    PRINT_CSTRING 
+            RET      
+
+EXT0_INPUT_STRING:   
+            EI       
+            RST     30h 
+            DB      $24 
+
+            LD      hl,EXT0_TEMP_STR 
+            LD      bc,$1000 ; init C to 0, init B to $10
+
+L_EXT0_CHIN_LOOP:    
+            PUSH    hl 
+            PUSH    bc 
+
+            EI       
+
+            RST     30h 
+            DB      $A1 
+
+            DI       
+            LD      a,c 
+            POP     bc 
+            POP     hl 
+
+            CP      $1b ; ESC
+            JR      z,L_ED_CHIN_INTERRUPTED 
+            CP      $0D 
+            JR      z,L_EXIT_ED_CHIN 
+            CP      $0A 
+            JR      z,L_EXIT_ED_CHIN 
+
+            LD      (hl),a 
+            INC     c 
+            INC     hl 
+            DJNZ    L_EXT0_CHIN_LOOP 
+
+L_EXIT_ED_CHIN:      
+            RET      
+L_ED_CHIN_INTERRUPTED:  
+            LD      c,$FF 
+            RET 
+
+CHECK_IC_SAVE_BINARY_PROGRAM:
+            LD      a,(FLASH1_TYPE) 
+            CP      $01 ; check AMD
+            push af
+            call      z,SAVE_BIN_FOR_AMD 
+            pop af
+            RET Z
+            
+            CP      $02 ; check SST
+            jr nz, next_check
+            inc a ; clear Z flag
+            ret 
+            
+next_check:
+            CP      $03 ; check ATmel
+            push AF
+            CALL      z,SAVE_BIN_FOR_ATMEL 
+            pop AF
+            ret z
+            
+            LD      hl,STR_EXT0_IC_UNKNOWN 
+            CALL    PRINT_CSTRING 
+
+            LD      hl,STR_EXT0_NOT_SUPPORTED 
+            CALL    PRINT_CSTRING 
+            
+            xor a
+
+            RET      
+
+
+SAVE_BASIC_PROGRAM:  
+            LD      a,(FLASH1_TYPE) 
+            CP      $01 ; check AMD
+            JP      z,SAVE_FOR_AMD 
+
+            CP      $02 ; check SST
+            JP      z,SAVE_FOR_SST 
+
+            CP      $03 ; check ATmel
+            JP      z,SAVE_FOR_ATMEL 
+
+            LD      hl,STR_EXT0_IC_UNKNOWN 
+            CALL    PRINT_CSTRING 
+
+            LD      hl,STR_EXT0_NOT_SUPPORTED 
+            CALL    PRINT_CSTRING 
+
+            RET      
+
+SAVE_BIN_FOR_AMD:
+SAVE_FOR_AMD:        
+            LD      hl,STR_EXT0_IC_AMD 
+            CALL    PRINT_CSTRING 
+
+            LD      hl,STR_EXT0_NOT_SUPPORTED 
+            CALL    PRINT_CSTRING 
+
+            RET
+
+SAVE_BIN_FOR_ATMEL:
+SAVE_FOR_ATMEL:      
+            LD      hl,STR_EXT0_IC_ATMEL 
+            CALL    PRINT_CSTRING 
+
+            LD      hl,STR_EXT0_NOT_SUPPORTED 
+            CALL    PRINT_CSTRING 
+
+            RET      
+
+SAVE_FOR_SST:        
+            LD      hl,STR_EXT0_IC_SST 
+            CALL    PRINT_CSTRING 
+
+            LD      hl,STR_EXT0_SUPPORTED 
+            CALL    PRINT_CSTRING 
+
+            CALL    CHECK_BASIC_PROGRAM_SIZE 
+            CALL    calculate_usable_8k 
+            XOR     a 
+            CP      h 
+            JR      z,L_NOT_ENOUGH_RAM_TO_PROGRAM_FLASH ; returns usable 8k in HL
+            
+            
+; init variables
+            LD      (MAPPED_IN_SECTOR),a 
+            LD      (PREV_BANK_BLOCK),a 
+            EX      de,hl 
+            LD      hl,($1722) 
+            LD      (PROGRAM_POS),hl 
+            EX      de,hl 
+
+            LD      a,h 
+            CP      $01 
+            JR      z,L_USE_CART_RAM
+            
+            JR      L_USE_TVC_RAM 
+
+L_USE_CART_RAM:      
+            LD      hl,STR_EXT0_USING_CART_RAM 
+            CALL    PRINT_CSTRING 
+            CALL    COPY_BAM_TO_CART_RAM 
+            RET      
+L_USE_TVC_RAM:       
+; print selected IC
+            LD      (BAM_IN_TVC_RAM),hl 
+            LD      hl,STR_EXT0_USING_TVC_RAM 
+            CALL    PRINT_CSTRING 
+            LD      hl,(BAM_IN_TVC_RAM) ; print using selected TVC storage area
+            CALL    F_PRINT_HEX_NUMBER 
+            LD      hl,STR_EXT0_CRLF 
+            CALL    PRINT_CSTRING 
+
+            CALL    COPY_BAM_TO_TVC_RAM 
+            CALL    TVC_RAM_COPY_PROGRAM_TO_FLASH 
+            RET      
+L_NOT_ENOUGH_RAM_TO_PROGRAM_FLASH:  
+            LD      hl,STR_EXT0_NOT_ENOUGH_RAM_TO_SAVE 
+            CALL    PRINT_CSTRING 
+            RET      
+
+TVC_RAM_COPY_PROGRAM_TO_FLASH:  
+            LD      hl,CART_COPY_PROG_TVC 
+            LD      bc,CART_COPY_PROG_TVC_END-CART_COPY_PROG_TVC 
+            LD      de,EXT0_BASE_END 
+            LDIR     
+            CALL    EXT0_BASE_END ; copy_prog_TVC
+            RET      
+
+CART_COPY_PROG_TVC:  
+            .PHASE  EXT0_BASE_END 
+            XOR     a 
+            LD      e,a 
+            LD      d,>BAM_START & $F0 
+            LD      hl,BAM_START 
+            XOR     a 
+            SBC     hl,de 
+            EX      de,hl 
+            LD      hl,(BAM_IN_TVC_RAM) 
+            ADD     hl,de 
+            LD      bc,0 
+L_SEARCH_FREE_BLOCK:  
+            LD      a,(hl) 
+            CP      $ff 
+            JR      nz,L_FREE_BLOCK_FOUND 
+            INC     hl 
+            LD      a,c 
+            ADD     a,8 
+            LD      c,a 
+L_CHECK_BANK_BLOCK_POINTERS:  
+            CP      64 
+            JR      nz,L_SEARCH_FREE_BLOCK 
+            LD      c,0 
+            INC     b 
+; check chip size, second chip?
+; (not needed as not available area is FF'ed and size should
+;  be enough, as it was calculated earlier it fits!)
+            JR      L_SEARCH_FREE_BLOCK 
+L_FREE_BLOCK_FOUND:  
+            LD      a,1 
+L_ALLOCATE_LOOP:     
+            LD      d,a 
+            AND     (hl) 
+            LD      a,d 
+            CALL    z,ALLOCATE_BLOCK
+            JR      z,L_FINALIZE_SST_COPY_FROM_TVC_RAM_AND_DONE ; last block copied, exit loop
+            INC     c 
+            SLA     a 
+            JR      nc,L_ALLOCATE_LOOP 
+            INC     hl 
+            LD      a,c 
+            JR      L_CHECK_BANK_BLOCK_POINTERS 
+
+L_FINALIZE_SST_COPY_FROM_TVC_RAM_AND_DONE:
+            PUSH    bc 
+
+            LD      c,'F' 
+            RST     30h 
+            DB      21h 
+            DI
+            POP     bc 
+
+            CALL    MAP_OUT_SECTOR 
+            CALL    WRITE_BACK_SST_BAM_FROM_TVC 
+
+            RET      
+
+WRITE_BACK_SST_BAM_FROM_TVC:
+            LD      c,'e' 
+            RST     30h 
+            DB      21h 
+            DI
+
+            LD      hl,$c000 
+            LD      (register_location),hl ; default register location
+            XOR     a 
+            LD      (A19_STORE),a 
+            LD      (REGISTER_STORE),a 
+
+            LD      a,>BAM_START 
+            AND     $30 
+            RRCA     
+            RRCA     
+            RRCA     
+            RRCA     
+            LD      b,a
+
+            CALL    INIT_SST_ARBITRARY_SECTOR_ERASE 
+
+            LD      c,$13 ; CRSR to left
+            RST     30h 
+            DB      21h 
+            LD      c,'E' 
+            RST     30h 
+            DB      21h
+            LD      c,'b' 
+            RST     30h 
+            DB      21h 
+            DI
+
+            LD      hl,(BAM_IN_TVC_RAM) 
+            LD      de,BAM_START 
+            LD      bc,$1000 
+
+            CALL    L_SST_WRITE_ONE_SECTOR_LOOP
+            
+            LD      c,$13 ; CRSR to left
+            RST     30h 
+            DB      21h 
+            LD      c,'B' 
+            RST     30h 
+            DB      21h
+            DI
+            
+            RET      
+
+
+F_SET_PAGES_REG_LOC_USED:  ; HL-flash address, D-flash data, E-0 or A19
+            LD      A,H 
+            AND     $c0 
+            RLCA     
+            RLCA     
+
+            OR      E   ; chip select ($20) and register relocation ($80) info
+            EXX 
+            LD      hl,(REGISTER_LOCATION) 
+            LD      (hl),a 
+            EXX
+
+            LD      a,$C0 
+            OR      h 
+            LD      h,a 
+            LD      (hl),d 
+            RET      
+
+F_SET_PAGES_NOREGREL:  ; HL-flash address, D-flash data, E-0 or A19
+            LD      A,H 
+            AND     $c0 
+            RLCA     
+            RLCA     
+            OR      E 
+            LD      (register_disable_reset),a 
+
+            LD      a,$c0 
+            OR      h 
+            LD      h,a 
+            LD      (hl),d 
+            RET      
+
+; input B as sector to be erased. loses everything (HL, DE, A is used, BC preserved)
+INIT_SST_ARBITRARY_SECTOR_ERASE:  
+            LD      a,b 
+            AND     10000000b 
+            RRCA     ; shift to right to get the CHIP-SELECT bit
+            RRCA
+            LD      e,a ; load it into E, which Chip#
+
+            LD      hl,$5555 
+            LD      d,$AA 
+            CALL    F_SET_PAGES_NOREGREL 
+
+            LD      hl,$2AAA 
+            LD      d,$55 
+            CALL    F_SET_PAGES_NOREGREL 
+
+            LD      hl,$5555 
+            LD      d,$80 
+            CALL    F_SET_PAGES_NOREGREL 
+ 
+            LD      hl,$5555 
+            LD      d,$AA 
+            CALL    F_SET_PAGES_NOREGREL 
+
+            LD      hl,$2AAA 
+            LD      d,$55 
+            CALL    F_SET_PAGES_NOREGREL 
+
+            ld hl,$0000 
+            LD      a,b 
+            SRL     a 
+            RR      h 
+            SRL     a 
+            RR      h ; bit 6-7 contains the A12-A13
+            SRL     h 
+            SRL     h ; bit 4-5 (upper nibble) contains A12-A13 of SST chip
+
+            LD      (register_disable_reset),a ; proper bank selected on proper chip
+            LD      de,$c075 ; make sure no $C000 is written or read, for
+; the SST chip only A18-A12 is relevant
+            ADD     hl,de
+
+            LD      (hl),$30
+            
+L_SST_FINISH_ARBITRARY_SECTORY_CLEAR_LOOP:  
+            LD      a,(hl) 
+            AND     $80 
+            JR      z,L_SST_FINISH_ARBITRARY_SECTORY_CLEAR_LOOP 
+
+            XOR     a 
+            LD      (REGISTER),a 
+
+            RET      
+
+A19_STORE:           
+            DB      0 
+REGISTER_STORE:      
+            DB      0 
+REGISTER_LOCATION:   
+            DW      0 
+
+; Input B as the sector to be written out
+SST_WRITE_ONE_SECTOR:  
+            LD      hl,register
+            LD      (register_location),hl ; default register location is $C000
+            LD      a,b ; from the mapped-in sector number let's calculate bank -> register_store
+            SRL     a 
+            SRL     a 
+            LD      (REGISTER_STORE),a 
+            AND     A19 ; calculate which chip -> A19 store
+            LD      (A19_STORE),a 
+            LD      a,b ; calculate TVC address from sector
+            AND     3 ; 4k selector
+            ADD     a,$0c ; in TVC it starts at $C000
+            RLCA     ; lower nibble to upper nibble
+            RLCA     
+            RLCA     
+            RLCA     
+            LD      h,a 
+            XOR     a 
+            LD      l,a ; HL contains the target sector in TVC
+            LD      a,$c0 
+            CP      h 
+            JR      nz,L_SST_WRITE_REGISTER_PLACED_WELL 
+            LD      a,(REGISTER_STORE) 
+            OR      REGREL ; $80
+            LD      (REGISTER_STORE),a 
+            LD      (REGISTER),a ; move register right now!
+            LD      a,(A19_STORE) 
+            OR      REGREL ; $80
+            LD      (A19_STORE),a ; A19_STORE contains regrel flag
+            LD      de,register_reloc 
+            LD      (REGISTER_LOCATION),de
+
+L_SST_WRITE_REGISTER_PLACED_WELL:  
+            LD      bc,$1000 ; number of bytes to store _AND_ data offset to BAM
+            EX      de,hl ; DE now contains target address in TVC
+            LD      hl,(BAM_IN_TVC_RAM) 
+            ADD     hl,bc ; HL now contains source address in TVC
+
+L_SST_WRITE_ONE_SECTOR_LOOP:  
+            PUSH    hl 
+            PUSH    de 
+
+            LD      a,(A19_STORE) 
+            LD      e,a 
+
+            LD      hl,$5555 
+            LD      d,$AA 
+            CALL    F_SET_PAGES_REG_LOC_USED 
+
+            LD      hl,$2AAA 
+            LD      d,$55 
+            CALL    F_SET_PAGES_REG_LOC_USED 
+
+            LD      hl,$5555 
+            LD      d,$A0 
+            CALL    F_SET_PAGES_REG_LOC_USED 
+
+            LD      a,(REGISTER_STORE) 
+            LD      hl,(REGISTER_LOCATION) 
+            LD      (hl),a 
+            POP     de 
+            POP     hl
+            ldi
+            
+            jp pe, L_SST_WRITE_ONE_SECTOR_LOOP
+            
+            LD      hl,(REGISTER_LOCATION) 
+            XOR     a 
+            LD      (hl),a 
+
+            RET      
+
+; input A : the sector to be mapped in
+SST_READ_ONE_SECTOR:  
+            LD      h,0 
+            SRL     a 
+            RR      h 
+            SRL     a 
+            RR      h 
+            LD      ($c002),a ; read on $C000-$c003 doesn't cause reset
+
+            SRL     h 
+            SRL     h 
+
+            LD      a,h 
+            OR      $C0 
+            LD      h,a 
+            XOR     a 
+            LD      l,a ; HL is source address in TVC
+            PUSH    hl 
+            LD      hl,(BAM_IN_TVC_RAM) 
+            LD      de,$1000 
+            ADD     hl,de 
+            EX      de,hl 
+            POP     hl 
+            LD      bc,$1000 
+            LDIR     
+            XOR     a 
+            LD      (register),a 
+            RET      
+
+            .DEPHASE  
+CART_COPY_PROG_TVC_END:  
+
+; (MAPPED_IN_SECTOR) contains the sector to be mapped out
+MAP_OUT_SECTOR:      
+            PUSH    bc 
+            PUSH    hl 
+
+            LD      c,'e' 
+            RST     30h 
+            DB      21h
+            DI       
+
+            LD      a,(MAPPED_IN_SECTOR) 
+            LD      b,a
+            CALL    INIT_SST_ARBITRARY_SECTOR_ERASE 
+            
+            LD      c,$13 
+            RST     30h 
+            DB      21h 
+            LD      c,'E' 
+            RST     30h 
+            DB      21h 
+            LD      c,'w' 
+            RST     30h 
+            DB      21h 
+            DI
+
+            LD      a,(MAPPED_IN_SECTOR) 
+            LD      b,a 
+            CALL    SST_WRITE_ONE_SECTOR 
+            POP     hl 
+            POP     bc 
+            RET      
+
+; input A contains the sector to be mapped in
+MAP_IN_SECTOR:       
+            PUSH    af 
+            LD      c,'r' 
+            RST     30h 
+            DB      21h 
+            DI       
+            POP     af 
+
+            CALL    SST_READ_ONE_SECTOR 
+            RET      
+
+
+ALLOCATE_BLOCK:      
+            PUSH    af ; in A e.g: 00001000b
+            OR      (hl) 
+            LD      (hl),a 
+
+            LD      a,(MAPPED_IN_SECTOR) 
+            OR      a ; can't be, in the 0th bank there is the cart SW!
+            CALL    z,CREATE_DIRECTORY_ENTRY ; this is the first round!
+            CALL    nz,WRITE_PREV_SECTOR_HEADER 
+            CALL    MAP_SECTOR 
+            CALL    COPY_PROGRAM_BLOCK_TO_TVC_RAM 
+
+            LD      (PREV_BANK_BLOCK),bc 
+
+            CALL    CHECK_FINISH_SST_PROGRAM_COPY_TVC_RAM 
+
+            POP     de ; flags must not be changed!
+            LD      a,d 
+            RET      
+
+CHECK_FINISH_SST_PROGRAM_COPY_TVC_RAM:  
+            LD      de,(PROGRAM_SIZE_TO_SAVE) 
+            LD      a,d 
+            OR      e ; is remaining program size ZERO? -> Z flag set
+            RET      
+
+COPY_PROGRAM_BLOCK_TO_TVC_RAM:  
+            PUSH    bc 
+            PUSH    hl 
+            PUSH    bc 
+            LD      c,'.' 
+            RST     30h 
+            DB      $21 
+            DI       
+            POP     bc 
+
+            LD      a,(BAM_IN_TVC_RAM+1) ; BAM's sector
+            ADD     a,$10 
+            LD      d,a 
+            LD      a,c 
+            AND     $0F 
+            ADD     a,d 
+            LD      h,a 
+            XOR     a 
+            LD      l,a 
+            INC     hl 
+            INC     hl 
+            LD      de,(PROGRAM_POS) 
+            PUSH    de ; source
+            PUSH    hl ; target
+
+
+            LD      hl,(PROGRAM_SIZE_TO_SAVE) 
+            LD      de,254 
+            XOR     a 
+            SBC     hl,de 
+            JR      z,L_SST_BLOCK_COPY_LAST_BLOCK 
+            JR      nc,L_SST_BLOCK_COPY_NORMAL_BLOCK 
+L_SST_BLOCK_COPY_LAST_BLOCK:  ; if exactly 254 or less than 254 bytes to store
+            LD      bc,(PROGRAM_SIZE_TO_SAVE) 
+            LD      (PROGRAM_SIZE_TO_SAVE),a 
+            LD      (PROGRAM_SIZE_TO_SAVE+1),a 
+            POP     hl 
+            PUSH    hl 
+            DEC     hl 
+            LD      (hl),c ; store the valid bytes in the last block (b is 0)
+            DEC     hl 
+            DEC     a ; store $FF in the block's first byte (last block!)
+            LD      (hl),a 
+            JR      L_SST_COPY_BLOCK 
+L_SST_BLOCK_COPY_NORMAL_BLOCK:  
+            LD      bc,254 
+            LD      (PROGRAM_SIZE_TO_SAVE),hl 
+L_SST_COPY_BLOCK:
+            POP     de ; target
+            POP     hl ; source (switched registers!)
+
+            LDIR     
+
+            LD      (PROGRAM_POS),hl 
+
+            POP     hl 
+            POP     bc 
+            RET      
+
+WRITE_PREV_SECTOR_HEADER:  
+            PUSH    hl 
+
+            LD      a,(PREV_BANK_BLOCK) ; block into a
+            AND     00001111b ; Limiting to the 4k sector which is mapped in
+            LD      hl,(BAM_IN_TVC_RAM) ; BAM sector copy address in TVC RAM
+            ADD     a,h 
+            ADD     a,$10 
+
+            LD      h,a 
+            XOR     a 
+            LD      l,a 
+            LD      (hl),b 
+            INC     hl 
+            LD      (hl),c 
+            POP     hl 
+            RET      
+
+MAP_SECTOR:
+            PUSH    hl ; pointer to the allocating byte in BAM
+            PUSH    bc ; current bank and block
+            LD      a,(MAPPED_IN_SECTOR) ; what sector is mapped in
+            SLA     c ; calculate what sector should be mapped in
+            SLA     c 
+            SLA     c 
+            RL      b 
+            SLA     c 
+            RL      b ; b contains the new sector number
+            CP      b 
+            JR      z,L_MAP_FINISHED ; same, done
+            CP      0 
+            CALL    nz,MAP_OUT_SECTOR 
+            LD      a,b
+            LD      (MAPPED_IN_SECTOR),a 
+            
+            CALL    MAP_IN_SECTOR 
+L_MAP_FINISHED:      
+            POP     bc 
+            POP     hl 
+            RET      
+
+CREATE_DIRECTORY_ENTRY:  
+            PUSH    bc 
+            PUSH    hl 
+            PUSH    bc 
+            LD      c,'d' 
+            RST     30h 
+            DB      21h 
+            DI       
+            POP     bc 
+
+            LD      hl,BAM_START 
+            LD      d,>BAM_START & $F0 
+            XOR     a 
+            LD      e,a 
+            SBC     hl,de 
+            EX      de,hl 
+
+            LD      hl,(BAM_IN_TVC_RAM) 
+            ADD     hl,de 
+            LD      de,$200 
+            ADD     hl,de 
+
+            LD      de,$14 
+L_CHECK_ENTRY_TYPE:
+            ADD     hl,de 
+            LD      a,(hl) 
+            OR      a 
+            JR      nz,L_CHECK_ENTRY_TYPE 
+            LD      a,3 ; CAS TYPE
+            LD      (hl),a 
+            INC     hl 
+            LD      (hl),b ; bank
+            INC     hl 
+            LD      (hl),c ; block
+            INC     hl 
+            PUSH    hl 
+            LD      hl,(PROGRAM_SIZE_TO_SAVE) 
+            LD      b,0 
+            LD      de,254 
+L_CALC_BLOCKS_LOOP:  
+            INC     b 
+            XOR     a 
+            SBC     hl,de 
+            JR      nc,L_CALC_BLOCKS_LOOP 
+            POP     hl 
+            LD      (hl),b 
+            INC     hl 
+            EX      de,hl 
+            LD      hl,EXT0_TEMP_STR 
+            LD      bc,16 
+            LDIR     
+            EX      de,hl 
+            LD      (hl),a 
+
+            LD      c,$13 ; CRSR to left
+            RST     30h 
+            DB      21h 
+            LD      c,'D' 
+            RST     30h 
+            DB      21h 
+            DI       
+
+            POP     hl 
+            POP     bc 
+            XOR     a ; set Z
+            RET      
+
+COPY_BAM_TO_TVC_RAM:  
+            LD      c,'R' 
+            RST     30h 
+            DB      21h 
+            DI       
+            LD      de,(BAM_IN_TVC_RAM) 
+            XOR     a 
+            LD      l,a 
+            LD      h,>BAM_START  & $f0 ; (upper byte of BAM_START and $F0)
+            LD      bc,$1000 ; 4kB
+            LDIR     
+            RET      
+
+COPY_BAM_TO_CART_RAM:
+            
+            LD      hl,CART_BAM_TO_CART_RAM 
+            LD      bc,CART_BAM_TO_CART_RAM_END-CART_BAM_TO_CART_RAM 
+            LD      de,EXT0_BASE_END 
+            LDIR     
+            CALL    EXT0_BASE_END 
+            RET      
+
+CART_BAM_TO_CART_RAM:  
+            .PHASE  EXT0_BASE_END
+            ld a,REGREL
+            ld (register),a
+            LD      bc,$10FF ; fast end-checking, it loops for $1000
+            LD      hl,BAM_START 
+            LD      de,$C000
+            LD      a,RAM+REGREL 
+            EX      af,af' 
+BAM_TO_TVC_RAM_COPY_LOOP:  
+            LD      a,(hl) 
+            EX      af,af' 
+            LD      (register_reloc),a 
+            EX      af,af' 
+            LD      (de),a 
+            LD a,REGREL
+            LD      (register_reloc),a 
+            INC     hl 
+            INC     de 
+            DEC     bc 
+            CP      b 
+            JR      nz,BAM_TO_TVC_RAM_COPY_LOOP 
+            EX      af,af'
+            XOR A
+            ld (REGISTER_RELOC),a
+            RET      
+            .DEPHASE  
+CART_BAM_TO_CART_RAM_END:  
+
+CALCULATE_USABLE_8K:  
+            LD      hl,($1722) 
+            LD      de,(PROGRAM_SIZE_TO_SAVE) 
+            ADD     hl,de 
+            LD      a,$5f 
+            CP      h 
+            JR      nc,L_CALC_USABLE_8K_DONE 
+            LD      a,($8000) 
+            LD      c,a 
+            LD      a,01010101b 
+            LD      ($8000),a 
+            LD      a,($8000) 
+            CP      01010101b 
+            JR      nz,L_CHECK_CART_RAM 
+            LD      c,a 
+            LD      ($8000),a 
+            LD      a,$9F 
+            CP      h 
+            JR      nc,L_CALC_USABLE_8K_DONE 
+L_CHECK_CART_RAM:    
+            LD      a,(SIZE_OF_CART_RAM) 
+            CP      $00 
+            RET     z 
+            XOR     a 
+L_CALC_USABLE_8K_DONE:  
+            INC     a 
+            LD      h,a 
+            LD      l,0 
+            RET      
+
+CHECK_BASIC_PROGRAM_SIZE:  
+            CALL    check_if_basic_program_fit 
+            PUSH    af 
+
+            LD      hl,STR_EXT0_SIZE_TO_SAVE ; print program size to save
+            CALL    PRINT_CSTRING 
+            LD      hl,(PROGRAM_SIZE_TO_SAVE) 
+            CALL    F_PRINT_HEX_NUMBER 
+            LD      hl,STR_EXT0_BYTES 
+            CALL    PRINT_CSTRING 
+
+            POP     af 
+
+            CP      $00 
+            RET     z 
+            CP      $01 
+            JR      z,L_NO_SPACE_ON_BAM 
+            CP      $02 
+            JR      z,L_ZERO_FILE 
+L_NO_SPACE_ON_BAM:   
+            LD      hl,STR_EXT0_NOT_ENOUGH_SPACE 
+            CALL    PRINT_CSTRING 
+            POP     hl ; exit to 2 level up
+            RET      
+L_ZERO_FILE:         
+            LD      hl,STR_EXT0_ZERO_COPY 
+            CALL    PRINT_CSTRING 
+            POP     hl ; exit to 2 level up
+            RET      
+
+PRINT_CSTRING:       
+            LD      bc,0 
+            LD      de,EXT0_BASE_END 
+            XOR     a 
+L_PC_LOOP:           
+            CP      (hl) 
+            JR      z,L_PC_COPY_DONE 
+            LDI      
+            INC     bc 
+            INC     bc 
+            JR      L_PC_LOOP 
+L_PC_COPY_DONE:      
+            LD      de,EXT0_BASE_END 
+            RST     30h 
+            DB      $22 
+            RET      
+
+CHECK_IF_BASIC_PROGRAM_FIT:  
+            CALL    CALC_PROGRAM_END_POS 
+            PUSH    hl 
+            LD      hl,($1722) 
+            EX      de,hl 
+            POP     hl 
+            XOR     a 
+            SBC     hl,de ; HL contains the bytes of the program
+            CP      h 
+            JR      nz,L_CPS_NON_ZERO_SIZE 
+            CP      l 
+            JR      z,L_CPS_ZERO_SIZE
+L_CPS_NON_ZERO_SIZE:
+            inc hl ; including the trailing zero
+CHECK_IF_MEMORY_AREA_FIT:            
+            LD      (PROGRAM_SIZE_TO_SAVE),hl 
+            PUSH    hl 
+            LD      hl,(FREE_BLOCKS_IN_BAMS) 
+            LD      c,l 
+            LD      b,h 
+            POP     hl 
+            LD      de,254 
+
+L_CPS_CHECK_LOOP:    
+            XOR     a 
+            SBC     hl,de 
+            DEC     bc 
+            DEC     a 
+            CP      b 
+            JR      z,L_NOT_ENOUGH_SPACE 
+            CP      h 
+            JR      z,L_ENOUGH_SPACE 
+            JR      L_CPS_CHECK_LOOP 
+L_ENOUGH_SPACE:      
+            XOR     a 
+            RET      
+L_NOT_ENOUGH_SPACE:  
+            LD      a,1 
+            RET      
+L_CPS_ZERO_SIZE:     ; program to save is 0 lenghted
+            LD      a,2 
+            RET      
+
+CALC_PROGRAM_END_POS:  ; Copied from ROM, located on different places on v1.2 and v2.2
+            LD      hl,$ffff 
+            EX      de,hl 
+            LD      hl,($1722) 
+            LD      bc,0 
+CPS_LOOP:            
+            ADD     hl,bc 
+            LD      c,(hl) 
+            INC     c 
+            DEC     c 
+            SCF      
+            RET     z 
+            PUSH    de 
+            INC     hl 
+            LD      e,(hl) 
+            INC     hl 
+            LD      d,(hl) 
+            DEC     hl 
+            DEC     hl 
+            EX      (sp),hl 
+            OR      a 
+            SBC     hl,de 
+            ADD     hl,de 
+            EX      de,hl 
+            POP     hl 
+            RET     z 
+            JR      nc,CPS_LOOP 
+            RET
+            
+            IF      LANG=EN 
+            .INCLUDE multicart_v2.1_save_str_en.z80 
+            ENDIF    
+            IF      LANG=HU 
+            .INCLUDE multicart_v2.1_save_str_hu.z80 
+            ENDIF
+            IF      LANG=ES
+            .INCLUDE multicart_v2.1_save_str_es.z80 
+            ENDIF    
+
+
+STR_EXT0_ENTER_START_ADDR:
+            .CSTR "Please enter the start address! \r\n> "
+STR_EXT0_ENTER_LAST_ADDR:
+            .CSTR "Please enter the last address to save! \r\n> "

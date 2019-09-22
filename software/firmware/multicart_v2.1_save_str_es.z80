@@ -1,0 +1,50 @@
+STR_EXT0_MENU1_SELECTED:  
+            .CSTR   "Guardando programa BASIC. " 
+
+STR_EXT0_MENU2_SELECTED:  
+            .CSTR   "Guardando ejecutable. " 
+
+
+STR_EXT0_FILENAME_Q:  
+            .CSTR   "Nombre del archivo\r\n> " 
+STR_EXT0_Q1:         
+            DB      "Que quieres hacer?\r\n" 
+            DB      "1) Guardar programa BASIC (CAS)\r\n" 
+            DB      "2) Guardar ejecutable en direccion de RAM (BIN)\r\n" 
+            DB      "3) Guardar area de la RAM (DAT)\r\n" 
+            .CSTR   "> " 
+STR_EXT0_INTERRUPTED:  
+            .CSTR   "Has presionado ESC; saliendo!\r\n" 
+STR_EXT0_NOT_EXPECTED:  
+            .CSTR   "Accion no permitida, saliendo!\r\n" 
+STR_EXT0_CRLF:       
+            .CSTR   "\r\n" 
+STR_EXT0_IC_AMD:     
+            .CSTR   "AM29F0x0" 
+STR_EXT0_IC_SST:     
+            .CSTR   "SST39SF0x0" 
+STR_EXT0_IC_ATMEL:   
+            .CSTR   "AT29C0x0" 
+STR_EXT0_IC_UNKNOWN:  
+            .CSTR   "IC desconocido" 
+STR_EXT0_SUPPORTED:  
+            .CSTR   " presente, comprobando tamano...\r\n" 
+STR_EXT0_NOT_SUPPORTED:  
+            .CSTR   " presente, no soportado. Saliendo!\r\n" 
+STR_EXT0_NOT_ENOUGH_SPACE:  
+            .CSTR   "No hay suficiente espacio libre. Saliendo!\r\n" 
+STR_EXT0_ZERO_COPY:  
+            .CSTR   "Archivo vacio, no se graba. Saliendo!\r\n" 
+STR_EXT0_FEATURE_NOT_SUPPORTED:  
+            .CSTR   "Funcionalidad no soportada aun. Saliendo!\r\n" 
+STR_EXT0_NOT_ENOUGH_RAM_TO_SAVE:  
+            .CSTR   "No hay memoria RAM libre suficiente. Saliendo!\r\n" 
+STR_EXT0_USING_CART_RAM:  
+            .CSTR   "Usando RAM del cartucho\r\n" 
+STR_EXT0_USING_TVC_RAM:  
+            .CSTR   "Usando RAM del TVC, empezando en $" 
+STR_EXT0_SIZE_TO_SAVE:  
+            .CSTR   "Se van a grabar: $" 
+STR_EXT0_BYTES:      
+            .CSTR   " bytes\r\n" 
+ 

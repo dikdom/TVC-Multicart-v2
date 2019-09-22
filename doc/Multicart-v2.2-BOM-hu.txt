@@ -1,0 +1,39 @@
+
+Minden alkatrész szépen jelölve van a nyáklapon. Ha kérdésed van: kérdezz és csak utána forrassz!
+
+
+4x	100nF, 1# (min 16V,  X7R vagy kőporc. Mindkettő jó)
+1x	22uF, 1# (4mm átmérő, 16V, én eddig subminit használtam, 4x7mm)
+1x	47uF, 1# (5mm átmérő, 16V, én eddig subminit használtam, 5x7mm)
+2x	1N4148 dióda, 2#
+1x	ellenállás 1k, 3#
+1x	ellenállás 4k7, 3#
+1x	ellenállás 5k1, 3#
+1x	ellenállás 10k, 3#
+1x	ellenállás-híd, 10k, 8+1pin
+1x	47pF, 1# (korong, kőporc)
+1x	68pF, 1# (korong, kőporc)
+1x	3mm piros LED
+1x3	pin header + 1x jumper (SRAM kiválasztó: vagy 512kB vagy kevesebb)
+
+(LS vagy HCT, amelyiket olcsóbban be tudod szerezni)
+1x 	74HCT32 	(+ DIP-14 foglalat)
+1x 	74HCT74 	(+ DIP-14 foglalat)
+1x 	74HCT123	(+ DIP-16 foglalat)
+1x 	74HCT273	(+ DIP-20 foglalat)
+1x 	DIP-32 foglalat
+3x 	PLCC-32 through-hole foglalat (nem SMD!!)
+
+1x	SST39SF010A (128kB flash)
+2x	SST39SF040 (512kB flash)
+
+1x	HM628128 (128kB SRAM). Opcionális, jelenleg nem használja még semmi a SRAM-ot...
+
+Szerintem érdemes minden IC-t (logikai és SRAM) foglalatba tenni, nem muszáj. A flash (PLCC-32 -eseket muszáj foglalatba tenni)
+
+SRAM-ot lehet ebayről venni vagy újat (AS6C1008). Ha ebay-ről szerzed be, akkor érdemes precíziós foglalatot tenni a SRAM alá.
+
+1# :  2.54mm láb távolság (1 raszter)
+3# :  3x2.54mm láb távolság (3 raszter)
+
+Mielőtt beforrasztod az 5.1 kOhmos ellenálást nézd meg, hogy a LED elég erősen világít-e. Nekem jó szokott lenni, de ha neked gyenge a fénye, akkor rakj be kisebb ellenállást!

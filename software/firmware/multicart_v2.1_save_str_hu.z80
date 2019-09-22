@@ -1,0 +1,52 @@
+STR_EXT0_MENU1_SELECTED:  
+            .CSTR   "BASIC program-ment\u0091s kiv\u0090lasztva. " 
+
+STR_EXT0_MENU2_SELECTED:  
+            .CSTR   "Futtathat\u0093 mem\u0093ria-ter\u0097let ment\u0091s kiv\u0090lasztva. " 
+
+STR_EXT0_FILENAME_Q:  
+            .CSTR   "\u0082rd be a nevet!\r\n> " 
+STR_EXT0_Q1:         
+            DB      "Mit szeretn\u0091l tenni?\r\n" 
+            DB      "1) BASIC program ment\u0091se (CAS)\r\n" 
+            DB      "2) Futtathat\u0093 mem\u0093ria-ter\u0097let ment\u0091se kezd\u0095c\u0092mmel (BIN)\r\n" 
+            DB      "3) Adatter\u0097let ment\u0091se (DAT)\r\n" 
+            .CSTR   "> " 
+STR_EXT0_INTERRUPTED:  
+            .CSTR   "ESC-t nyomt\u0090l, szia!\r\n" 
+STR_EXT0_NOT_EXPECTED:  
+            .CSTR   "Nem v\u0090rt bevitel, szia!\r\n" 
+STR_EXT0_CRLF:       
+            .CSTR   "\r\n" 
+STR_EXT0_IC_AMD:     
+            .CSTR   "AM29F0x0" 
+STR_EXT0_IC_SST:     
+            .CSTR   "SST39SF0x0" 
+STR_EXT0_IC_ATMEL:   
+            .CSTR   "AT29C0x0" 
+STR_EXT0_IC_UNKNOWN:  
+            .CSTR   "Ismeretlen" 
+STR_EXT0_SUPPORTED:  
+            .CSTR   " IC, szabad ter\u0097let ellen\u0095rz\u0091s...\r\n" 
+STR_EXT0_NOT_SUPPORTED:  
+            .CSTR   " IC, nem t\u0090mogatott, szia!\r\n" 
+STR_EXT0_NOT_ENOUGH_SPACE:  
+            .CSTR   "Nincs eleg szabad ter\u0097let, szia!\r\n" 
+STR_EXT0_ZERO_COPY:  
+            .CSTR   "Nulla hosszu file-t nem mentek, szia!\r\n" 
+STR_EXT0_FEATURE_NOT_SUPPORTED:  
+            .CSTR   "Ez a funkci\u0093 m\u0091g nem t\u0090mogatott, szia!\r\n" 
+STR_EXT0_NOT_ENOUGH_RAM_TO_SAVE:  
+            .CSTR   "Ehhez a m\u0098velethez nincs el\u0091g hely, szia!\r\n" 
+STR_EXT0_USING_CART_RAM:  
+            .CSTR   "A programmodul RAMj\u0090t haszn\u0090lom.\r\n" 
+STR_EXT0_USING_TVC_RAM:  
+            .CSTR   "TVC RAM-ot haszn\u0090lom, innen kezdve: $" 
+STR_EXT0_SIZE_TO_SAVE:  
+            .CSTR   "Ment\u0091si m\u0091ret: $" 
+STR_EXT0_BYTES:      
+            .CSTR   " byte\r\n" 
+
+; á 90   é 91   í 92   ó 93   ö 94   ő 95   ú 96  ü 97  ű 98
+
+
