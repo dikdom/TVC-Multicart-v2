@@ -11,20 +11,28 @@ from scratch.
 # Structure #
 
 *  doc
+
    Contains descriptions and help how to solder and program a module.
    Also a short explanation the structure of the repo, Hungarian.
 
 *  hardware
+
    Eagle source files and gerber files of the PCB.
 
 *  software
+
    *  firmware
+
       The multicart firmware source and binary, that drives the whole stuff. The
       binary is needed to build a complete multicart.
+
    *  rom-builder
+
       The source of the Lazarus program (Multiplatform, free pascal IDE), that 
       aids the building of the ROM images to be written to the onboaed EEPROM chips.
+
    *  tvcpla
+
       The source of the pla binary generator, and the generated binary also.
 
 # License #
