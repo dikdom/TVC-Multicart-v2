@@ -3,10 +3,29 @@ Copyright (C) 2017-2019 by Sandor Vass <vass.sanyi@gmail.com>
 All rights reserved.
 
 # About #
-The multicart is a flash storage device for the Videoton TV Computer 
-connected to the left side expansion slot (program-module).
+The multicart is a flash storage device for the Videoton TV Computer, 
+inserted to the left side expansion slot (program-module).
 This repository contains all the related source files to build one 
 from scratch.
+
+# Structure #
+
+*  doc
+   Contains descriptions and help how to solder and program a module.
+   Also a short explanation the structure of the repo, Hungarian.
+
+*  hardware
+   Eagle source files and gerber files of the PCB.
+
+*  software
+   *  firmware
+      The multicart firmware source and binary, that drives the whole stuff. The
+      binary is needed to build a complete multicart.
+   *  rom-builder
+      The source of the Lazarus program (Multiplatform, free pascal IDE), that 
+      aids the building of the ROM images to be written to the onboaed EEPROM chips.
+   *  tvcpla
+      The source of the pla binary generator, and the generated binary also.
 
 # License #
 
